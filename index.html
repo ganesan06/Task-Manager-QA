@@ -165,22 +165,22 @@
   .timer{
     position:absolute;
     top:12px; right:12px;
-    background:#fff;
-    border:1px solid var(--line);
+    background:#DCFCE7;
+    border:1px solid #BBF0CE;
     border-radius:6px;
     padding:3px 8px;
     font-family:'JetBrains Mono',monospace;
     font-size:12px;
     font-weight:500;
-    color:var(--ink-soft);
+    color:#14532D;
     display:flex;
     align-items:center;
     gap:5px;
   }
-  .timer.low{ color:var(--red); border-color:#F3B9BA; }
+  .timer.low{ background:#FEE2E2; color:var(--red-ink); border-color:#F3B9BA; }
   .timer .tdot{
     width:5px;height:5px;border-radius:50%;
-    background:var(--ink-soft);
+    background:#16A34A;
   }
   .timer.low .tdot{
     background:var(--red);
@@ -195,7 +195,7 @@
   }
   .progress-fill{
     height:100%;
-    background:var(--blue);
+    background:#22C55E;
     transition:width 1s linear, background 0.3s ease;
   }
   .progress-fill.low{ background:var(--red); }
@@ -264,6 +264,60 @@
     font-size:12px;
     padding:14px 4px 6px;
   }
+
+  .modal-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(27,27,24,0.45);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:100;
+  }
+  .modal-overlay.hidden{ display:none; }
+  .modal-box{
+    background:#fff;
+    border-radius:14px;
+    padding:22px 22px 18px;
+    width:min(320px, 90vw);
+    box-shadow:0 12px 32px rgba(0,0,0,0.18);
+  }
+  .modal-title{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:17px;
+    margin:0 0 8px;
+  }
+  .modal-body{
+    font-size:14px;
+    color:var(--ink-soft);
+    margin:0 0 20px;
+    line-height:1.45;
+  }
+  .modal-body strong{ color:var(--ink); }
+  .modal-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+  }
+  .modal-actions button{
+    border:none;
+    border-radius:8px;
+    padding:9px 16px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .modal-cancel{
+    background:var(--panel);
+    color:var(--ink);
+  }
+  .modal-cancel:hover{ background:var(--card-body); }
+  .modal-confirm{
+    background:var(--red);
+    color:#fff;
+  }
+  .modal-confirm:hover{ background:#c93f43; }
 </style>
 </head>
 <body>
@@ -272,9 +326,62 @@
   <div class="brand"><span class=""></span>TASK MANAGER</div>
 </div>
 
-<div class="board" id="board"></div>
+<div class="board" id="board">
+  <div class="empty-hint" style="grid-column: 1 / -1; padding: 40px 0;">Loading board…</div>
+</div>
+
+<div class="modal-overlay hidden" id="confirmModal">
+  <div class="modal-box">
+    <p class="modal-title">Delete card</p>
+    <p class="modal-body">Do you want to delete <strong id="confirmModalTitle"></strong>? This can't be undone.</p>
+    <div class="modal-actions">
+      <button class="modal-cancel" id="confirmModalCancel">Cancel</button>
+      <button class="modal-confirm" id="confirmModalConfirm">Delete</button>
+    </div>
+  </div>
+</div>
 
 <script>
+const STORAGE_KEY = 'board-state';
+const FULL_SECONDS = 43199;
+const LOW_TIME_THRESHOLD_SECONDS = 4 * 60 * 60;
+
+const hasArtifactStorage = typeof window.storage !== 'undefined'
+  && typeof window.storage.get === 'function'
+  && typeof window.storage.set === 'function';
+
+async function storageGet(key){
+  if(hasArtifactStorage){
+    try{
+      const result = await window.storage.get(key, false);
+      return result ? result.value : null;
+    }catch(e){
+      return null;
+    }
+  }
+  try{
+    return window.localStorage.getItem(key);
+  }catch(e){
+    return null;
+  }
+}
+
+async function storageSet(key, value){
+  if(hasArtifactStorage){
+    try{
+      await window.storage.set(key, value, false);
+      return;
+    }catch(e){
+      console.error('window.storage save failed, falling back to localStorage', e);
+    }
+  }
+  try{
+    window.localStorage.setItem(key, value);
+  }catch(e){
+    console.error('localStorage save failed', e);
+  }
+}
+
 const COLUMNS = [
   { id:'red',   label:'Backlog',    status:'red'   },
   { id:'amber', label:'Assigned',   status:'amber' },
@@ -282,21 +389,48 @@ const COLUMNS = [
   { id:'green', label:'Completed',       status:'green' },
 ];
 
-let tasks = [
-  { id:6,  title:'Task 6',  col:'red',   seconds: 43199, owner:'Assigned to me', me:true },
-  { id:7,  title:'Task 7',  col:'red',   seconds: 43199, owner:'Assigned to me', me:true },
-  { id:8,  title:'Task 8',  col:'red',   seconds: 43199, owner:'Assigned to me', me:true },
-  { id:9,  title:'Task 9',  col:'red',   seconds: 43199, owner:'Assigned to me', me:true },
-  { id:10, title:'Task 10', col:'red',   seconds: 43199, owner:'Assigned to me', me:true },
-  { id:5,  title:'Task 5',  col:'amber', seconds: 43199, owner:'Person 1', me:false },
-  { id:4,  title:'Task 4',  col:'amber', seconds: 43199, owner:'Person 1', me:false },
-  { id:2,  title:'Task 2',  col:'mint',  seconds: 43199, owner:'Person 1', me:false },
-  { id:3,  title:'Task 3',  col:'mint',  seconds: 43199, owner:'Person 1', me:false },
-  { id:1,  title:'Task 1',  col:'green', seconds: 43199, owner:'Person 1', me:false },
-];
+function defaultTasks(){
+  const now = Date.now();
+  const deadline = now + FULL_SECONDS * 1000;
+  const shortDeadline = now + 2 * 60 * 60 * 1000;
+  return [
+    { id:6,  title:'Task 6',  col:'red',   deadline, owner:'Assigned to me', me:true },
+    { id:7,  title:'Task 7',  col:'red',   deadline, owner:'Assigned to me', me:true },
+    { id:8,  title:'Task 8',  col:'red',   deadline, owner:'Assigned to me', me:true },
+    { id:9,  title:'Task 9',  col:'red',   deadline, owner:'Assigned to me', me:true },
+    { id:10, title:'Task 10', col:'red',   deadline, owner:'Assigned to me', me:true },
+    { id:5,  title:'Task 5',  col:'amber', deadline, owner:'Person 1', me:false },
+    { id:4,  title:'Task 4',  col:'amber', deadline, owner:'Person 1', me:false },
+    { id:2,  title:'Task 2',  col:'mint',  deadline, owner:'Person 1', me:false },
+    { id:3,  title:'Task 3',  col:'mint',  deadline, owner:'Person 1', me:false },
+    { id:1,  title:'Task 1',  col:'green', deadline: shortDeadline, owner:'Person 1', me:false },
+  ];
+}
 
+async function loadState(){
+  try{
+    const raw = await storageGet(STORAGE_KEY);
+    if(!raw) return { tasks: defaultTasks(), nextId: 11 };
+    const parsed = JSON.parse(raw);
+    if(!Array.isArray(parsed.tasks) || typeof parsed.nextId !== 'number'){
+      return { tasks: defaultTasks(), nextId: 11 };
+    }
+    return parsed;
+  }catch(e){
+    return { tasks: defaultTasks(), nextId: 11 };
+  }
+}
+
+async function saveState(){
+  await storageSet(STORAGE_KEY, JSON.stringify({ tasks, nextId }));
+}
+
+let tasks = [];
 let nextId = 11;
-const FULL_SECONDS = 43199;
+
+function remainingSeconds(task){
+  return Math.max(0, Math.round((task.deadline - Date.now()) / 1000));
+}
 
 function fmt(s){
   if(s < 0) s = 0;
@@ -329,7 +463,7 @@ function render(){
       col.classList.remove('dragover');
       const id = parseInt(e.dataTransfer.getData('text/plain'), 10);
       const task = tasks.find(t => t.id === id);
-      if(task){ task.col = colDef.id; render(); }
+      if(task){ task.col = colDef.id; saveState(); render(); }
     });
 
     const header = document.createElement('div');
@@ -349,12 +483,13 @@ function render(){
       });
       card.addEventListener('dragend', () => card.classList.remove('dragging'));
 
-      const pct = Math.max(0, Math.min(100, (task.seconds / FULL_SECONDS) * 100));
-      const low = task.seconds < FULL_SECONDS * 0.15;
+      const secondsLeft = remainingSeconds(task);
+      const pct = Math.max(0, Math.min(100, (secondsLeft / FULL_SECONDS) * 100));
+      const low = secondsLeft <= LOW_TIME_THRESHOLD_SECONDS;
 
       card.innerHTML = `
         <div class="card-top">
-          <div class="timer ${low ? 'low' : ''}" data-timer="${task.id}"><span class="tdot"></span><span data-timer-text="${task.id}">${fmt(task.seconds)}</span></div>
+          <div class="timer ${low ? 'low' : ''}" data-timer="${task.id}"><span class="tdot"></span><span data-timer-text="${task.id}">${fmt(secondsLeft)}</span></div>
           <p class="card-title">${task.title}</p>
           <div class="progress-track"><div class="progress-fill ${low?'low':''}" data-progress="${task.id}" style="width:${pct}%"></div></div>
         </div>
@@ -386,8 +521,8 @@ function render(){
   board.querySelectorAll('[data-remove]').forEach(btn => {
     btn.addEventListener('click', e => {
       const id = parseInt(e.currentTarget.dataset.remove, 10);
-      tasks = tasks.filter(t => t.id !== id);
-      render();
+      const task = tasks.find(t => t.id === id);
+      if(task) openConfirmModal(task);
     });
   });
 
@@ -397,7 +532,8 @@ function render(){
       const input = board.querySelector(`[data-input="${colId}"]`);
       const val = input.value.trim();
       if(!val) return;
-      tasks.push({ id: nextId++, title: val, col: colId, seconds: FULL_SECONDS, owner:'Assigned to me', me:true });
+      tasks.push({ id: nextId++, title: val, col: colId, deadline: Date.now() + FULL_SECONDS * 1000, owner:'Assigned to me', me:true });
+      saveState();
       render();
     });
   });
@@ -414,25 +550,67 @@ function render(){
 
 function tick(){
   tasks.forEach(t => {
-    if(t.seconds > 0){ t.seconds -= 1; }
-
     const timerEl = board.querySelector(`[data-timer="${t.id}"]`);
     const textEl = board.querySelector(`[data-timer-text="${t.id}"]`);
     const progressEl = board.querySelector(`[data-progress="${t.id}"]`);
     if(!timerEl || !textEl || !progressEl) return;
 
-    const pct = Math.max(0, Math.min(100, (t.seconds / FULL_SECONDS) * 100));
-    const low = t.seconds < FULL_SECONDS * 0.15;
+    const secondsLeft = remainingSeconds(t);
+    const pct = Math.max(0, Math.min(100, (secondsLeft / FULL_SECONDS) * 100));
+    const low = secondsLeft <= LOW_TIME_THRESHOLD_SECONDS;
 
-    textEl.textContent = fmt(t.seconds);
+    textEl.textContent = fmt(secondsLeft);
     progressEl.style.width = pct + '%';
     timerEl.classList.toggle('low', low);
     progressEl.classList.toggle('low', low);
   });
 }
 
-render();
-setInterval(tick, 1000);
+const confirmModal = document.getElementById('confirmModal');
+const confirmModalTitle = document.getElementById('confirmModalTitle');
+const confirmModalCancel = document.getElementById('confirmModalCancel');
+const confirmModalConfirm = document.getElementById('confirmModalConfirm');
+let pendingDeleteId = null;
+
+function openConfirmModal(task){
+  pendingDeleteId = task.id;
+  confirmModalTitle.textContent = task.title;
+  confirmModal.classList.remove('hidden');
+}
+
+function closeConfirmModal(){
+  pendingDeleteId = null;
+  confirmModal.classList.add('hidden');
+}
+
+confirmModalCancel.addEventListener('click', closeConfirmModal);
+
+confirmModalConfirm.addEventListener('click', () => {
+  if(pendingDeleteId !== null){
+    tasks = tasks.filter(t => t.id !== pendingDeleteId);
+    saveState();
+    render();
+  }
+  closeConfirmModal();
+});
+
+confirmModal.addEventListener('click', e => {
+  if(e.target === confirmModal) closeConfirmModal();
+});
+
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape' && !confirmModal.classList.contains('hidden')) closeConfirmModal();
+});
+
+async function init(){
+  const state = await loadState();
+  tasks = state.tasks;
+  nextId = state.nextId;
+  render();
+  setInterval(tick, 1000);
+}
+
+init();
 </script>
 
 </body>
