@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Task Manager QA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #EEECE4;
+    --panel: #F7F5EF;
+    --card: #FFFFFF;
+    --card-body: #E7E4DA;
+    --ink: #1B1B18;
+    --ink-soft: #6B685F;
+    --line: #D8D5C9;
+    --blue: #0B6BFF;
+    --blue-dark: #0A54C7;
+
+    --red: #E5484D;
+    --red-ink: #4B0D0F;
+    --amber: #F5A524;
+    --amber-ink: #4A2E02;
+    --mint: #6FE3C0;
+    --mint-ink: #063D30;
+    --green: #22C55E;
+    --green-ink: #0B3A1B;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    font-family:'Inter',sans-serif;
+    color:var(--ink);
+    min-height:100vh;
+  }
+
+  .topbar{
+    background:var(--blue);
+    background-image:linear-gradient(180deg,var(--blue),var(--blue-dark));
+    padding:16px 28px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    color:#fff;
+  }
+  .topbar .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:19px;
+    letter-spacing:0.02em;
+  }
+  .brand .dot{
+    width:9px;height:9px;border-radius:50%;
+    background:#fff;
+    animation:pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{opacity:1; box-shadow:0 0 0 0 rgba(255,255,255,0.5);}
+    50%{opacity:0.55; box-shadow:0 0 0 6px rgba(255,255,255,0);}
+  }
+  .topbar .clock{
+    font-family:'JetBrains Mono',monospace;
+    font-size:14px;
+    letter-spacing:0.03em;
+    opacity:0.92;
+  }
+
+  .board{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(240px,1fr));
+    gap:22px;
+    padding:26px;
+    align-items:start;
+  }
+  @media (max-width:1000px){
+    .board{grid-template-columns:repeat(2,1fr);}
+  }
+  @media (max-width:640px){
+    .board{grid-template-columns:1fr;}
+  }
+
+  .col{
+    background:var(--panel);
+    border-radius:14px;
+    border:1px solid var(--line);
+    padding:10px;
+    min-height:120px;
+    transition:background 0.15s ease;
+  }
+  .col.dragover{
+    background:#E4F0FF;
+    outline:2px dashed var(--blue);
+    outline-offset:-2px;
+  }
+
+  .col-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 18px;
+    border-radius:10px;
+    margin-bottom:12px;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:15px;
+    letter-spacing:0.03em;
+    text-transform:uppercase;
+  }
+  .col-header .count{
+    width:26px;height:26px;
+    border-radius:50%;
+    background:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:13px;
+  }
+
+  .col[data-status="red"] .col-header{ background:var(--red); color:#fff; }
+  .col[data-status="red"] .col-header .count{ color:var(--red-ink); }
+  .col[data-status="amber"] .col-header{ background:var(--amber); color:var(--amber-ink); }
+  .col[data-status="amber"] .col-header .count{ color:var(--amber-ink); }
+  .col[data-status="mint"] .col-header{ background:var(--mint); color:var(--mint-ink); }
+  .col[data-status="mint"] .col-header .count{ color:var(--mint-ink); }
+  .col[data-status="green"] .col-header{ background:var(--green); color:#fff; }
+  .col[data-status="green"] .col-header .count{ color:var(--green-ink); }
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:10px;
+    margin-bottom:12px;
+    cursor:grab;
+    overflow:hidden;
+    transition:box-shadow 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+  }
+  .card:active{cursor:grabbing;}
+  .card:hover{
+    box-shadow:0 4px 14px rgba(0,0,0,0.08);
+    border-color:#B9B5A5;
+  }
+  .card.dragging{
+    opacity:0.4;
+  }
+
+  .card-top{
+    background:var(--card-body);
+    padding:16px 14px 22px;
+    position:relative;
+  }
+  .card-title{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:20px;
+    margin:0 0 14px;
+  }
+  .timer{
+    position:absolute;
+    top:12px; right:12px;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:3px 8px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    font-weight:500;
+    color:var(--ink-soft);
+    display:flex;
+    align-items:center;
+    gap:5px;
+  }
+  .timer.low{ color:var(--red); border-color:#F3B9BA; }
+  .timer .tdot{
+    width:5px;height:5px;border-radius:50%;
+    background:var(--ink-soft);
+  }
+  .timer.low .tdot{
+    background:var(--red);
+    animation:pulse 1s ease-in-out infinite;
+  }
+
+  .progress-track{
+    position:absolute;
+    left:0; bottom:0;
+    width:100%; height:3px;
+    background:rgba(0,0,0,0.06);
+  }
+  .progress-fill{
+    height:100%;
+    background:var(--blue);
+    transition:width 1s linear, background 0.3s ease;
+  }
+  .progress-fill.low{ background:var(--red); }
+
+  .card-bottom{
+    display:flex;
+    justify-content:flex-end;
+    align-items:center;
+    padding:9px 12px;
+    gap:6px;
+  }
+  .tag{
+    font-size:12px;
+    font-weight:600;
+    letter-spacing:0.02em;
+    color:#fff;
+    background:var(--blue);
+    padding:5px 12px;
+    border-radius:6px;
+    text-transform:uppercase;
+  }
+  .tag.me{ background:var(--blue-dark); }
+  .remove-btn{
+    border:none;
+    background:transparent;
+    color:var(--ink-soft);
+    font-size:16px;
+    line-height:1;
+    cursor:pointer;
+    padding:4px 6px;
+    border-radius:6px;
+  }
+  .remove-btn:hover{ background:rgba(0,0,0,0.06); color:var(--red); }
+
+  .add-form{
+    display:flex;
+    gap:8px;
+    padding:8px 4px 4px;
+  }
+  .add-form input{
+    flex:1;
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:8px 10px;
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    background:#fff;
+    outline:none;
+  }
+  .add-form input:focus{ border-color:var(--blue); }
+  .add-form button{
+    border:none;
+    background:var(--blue);
+    color:#fff;
+    font-weight:600;
+    font-size:13px;
+    padding:8px 14px;
+    border-radius:8px;
+    cursor:pointer;
+  }
+  .add-form button:hover{ background:var(--blue-dark); }
+
+  .empty-hint{
+    text-align:center;
+    color:var(--ink-soft);
+    font-size:12px;
+    padding:14px 4px 6px;
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><span class=""></span>TASK MANAGER</div>
+</div>
+
+<div class="board" id="board"></div>
+
+<script>
+const COLUMNS = [
+  { id:'red',   label:'Backlog',    status:'red'   },
+  { id:'amber', label:'Assigned',   status:'amber' },
+  { id:'mint',  label:'Checkout',  status:'mint'  },
+  { id:'green', label:'Completed',       status:'green' },
+];
+
+let tasks = [
+  { id:6,  title:'Task 6',  col:'red',   seconds: 43199, owner:'Assigned to me', me:true },
+  { id:7,  title:'Task 7',  col:'red',   seconds: 43199, owner:'Assigned to me', me:true },
+  { id:8,  title:'Task 8',  col:'red',   seconds: 43199, owner:'Assigned to me', me:true },
+  { id:9,  title:'Task 9',  col:'red',   seconds: 43199, owner:'Assigned to me', me:true },
+  { id:10, title:'Task 10', col:'red',   seconds: 43199, owner:'Assigned to me', me:true },
+  { id:5,  title:'Task 5',  col:'amber', seconds: 43199, owner:'Person 1', me:false },
+  { id:4,  title:'Task 4',  col:'amber', seconds: 43199, owner:'Person 1', me:false },
+  { id:2,  title:'Task 2',  col:'mint',  seconds: 43199, owner:'Person 1', me:false },
+  { id:3,  title:'Task 3',  col:'mint',  seconds: 43199, owner:'Person 1', me:false },
+  { id:1,  title:'Task 1',  col:'green', seconds: 43199, owner:'Person 1', me:false },
+];
+
+let nextId = 11;
+const FULL_SECONDS = 43199;
+
+function fmt(s){
+  if(s < 0) s = 0;
+  const h = String(Math.floor(s/3600)).padStart(2,'0');
+  const m = String(Math.floor((s%3600)/60)).padStart(2,'0');
+  const sec = String(Math.floor(s%60)).padStart(2,'0');
+  return h+':'+m+':'+sec;
+}
+
+function render(){
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+
+  COLUMNS.forEach(colDef => {
+    const colTasks = tasks.filter(t => t.col === colDef.id);
+
+    const col = document.createElement('div');
+    col.className = 'col';
+    col.dataset.status = colDef.id;
+    col.dataset.colid = colDef.id;
+
+    col.addEventListener('dragover', e => {
+      e.preventDefault();
+      col.classList.add('dragover');
+    });
+    col.addEventListener('dragleave', () => col.classList.remove('dragover'));
+    col.addEventListener('drop', e => {
+      e.preventDefault();
+      col.classList.remove('dragover');
+      const id = parseInt(e.dataTransfer.getData('text/plain'), 10);
+      const task = tasks.find(t => t.id === id);
+      if(task){ task.col = colDef.id; render(); }
+    });
+
+    const header = document.createElement('div');
+    header.className = 'col-header';
+    header.innerHTML = `<span>${colDef.label}</span><span class="count">${colTasks.length}</span>`;
+    col.appendChild(header);
+
+    colTasks.forEach(task => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.draggable = true;
+      card.dataset.id = task.id;
+
+      card.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/plain', task.id);
+        setTimeout(() => card.classList.add('dragging'), 0);
+      });
+      card.addEventListener('dragend', () => card.classList.remove('dragging'));
+
+      const pct = Math.max(0, Math.min(100, (task.seconds / FULL_SECONDS) * 100));
+      const low = task.seconds < FULL_SECONDS * 0.15;
+
+      card.innerHTML = `
+        <div class="card-top">
+          <div class="timer ${low ? 'low' : ''}"><span class="tdot"></span>${fmt(task.seconds)}</div>
+          <p class="card-title">${task.title}</p>
+          <div class="progress-track"><div class="progress-fill ${low?'low':''}" style="width:${pct}%"></div></div>
+        </div>
+        <div class="card-bottom">
+          <button class="remove-btn" title="Remove card" data-remove="${task.id}">&times;</button>
+          <span class="tag ${task.me ? 'me' : ''}">${task.owner}</span>
+        </div>
+      `;
+
+      col.appendChild(card);
+    });
+
+    if(colTasks.length === 0){
+      const hint = document.createElement('div');
+      hint.className = 'empty-hint';
+      hint.textContent = 'No cards here';
+      col.appendChild(hint);
+    }
+
+    const form = document.createElement('div');
+    form.className = 'add-form';
+    form.innerHTML = `<input type="text" placeholder="New task title" data-input="${colDef.id}" />
+                       <button data-add="${colDef.id}">Add</button>`;
+    col.appendChild(form);
+
+    board.appendChild(col);
+  });
+
+  board.querySelectorAll('[data-remove]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const id = parseInt(e.currentTarget.dataset.remove, 10);
+      tasks = tasks.filter(t => t.id !== id);
+      render();
+    });
+  });
+
+  board.querySelectorAll('[data-add]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const colId = btn.dataset.add;
+      const input = board.querySelector(`[data-input="${colId}"]`);
+      const val = input.value.trim();
+      if(!val) return;
+      tasks.push({ id: nextId++, title: val, col: colId, seconds: FULL_SECONDS, owner:'Assigned to me', me:true });
+      render();
+    });
+  });
+
+  board.querySelectorAll('[data-input]').forEach(inp => {
+    inp.addEventListener('keydown', e => {
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        board.querySelector(`[data-add="${inp.dataset.input}"]`).click();
+      }
+    });
+  });
+}
+
+function tick(){
+  let changed = false;
+  tasks.forEach(t => {
+    if(t.seconds > 0){ t.seconds -= 1; changed = true; }
+  });
+  if(changed) render();
+
+  const now = new Date();
+  document.getElementById('liveClock').textContent =
+    now.toTimeString().slice(0,8);
+}
+
+render();
+setInterval(tick, 1000);
+</script>
+
+</body>
+</html>
