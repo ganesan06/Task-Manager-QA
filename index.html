@@ -306,8 +306,9 @@ function fmt(s){
   return h+':'+m+':'+sec;
 }
 
+const board = document.getElementById('board');
+
 function render(){
-  const board = document.getElementById('board');
   board.innerHTML = '';
 
   COLUMNS.forEach(colDef => {
@@ -353,9 +354,9 @@ function render(){
 
       card.innerHTML = `
         <div class="card-top">
-          <div class="timer ${low ? 'low' : ''}"><span class="tdot"></span>${fmt(task.seconds)}</div>
+          <div class="timer ${low ? 'low' : ''}" data-timer="${task.id}"><span class="tdot"></span><span data-timer-text="${task.id}">${fmt(task.seconds)}</span></div>
           <p class="card-title">${task.title}</p>
-          <div class="progress-track"><div class="progress-fill ${low?'low':''}" style="width:${pct}%"></div></div>
+          <div class="progress-track"><div class="progress-fill ${low?'low':''}" data-progress="${task.id}" style="width:${pct}%"></div></div>
         </div>
         <div class="card-bottom">
           <button class="remove-btn" title="Remove card" data-remove="${task.id}">&times;</button>
@@ -412,15 +413,22 @@ function render(){
 }
 
 function tick(){
-  let changed = false;
   tasks.forEach(t => {
-    if(t.seconds > 0){ t.seconds -= 1; changed = true; }
-  });
-  if(changed) render();
+    if(t.seconds > 0){ t.seconds -= 1; }
 
-  const now = new Date();
-  document.getElementById('liveClock').textContent =
-    now.toTimeString().slice(0,8);
+    const timerEl = board.querySelector(`[data-timer="${t.id}"]`);
+    const textEl = board.querySelector(`[data-timer-text="${t.id}"]`);
+    const progressEl = board.querySelector(`[data-progress="${t.id}"]`);
+    if(!timerEl || !textEl || !progressEl) return;
+
+    const pct = Math.max(0, Math.min(100, (t.seconds / FULL_SECONDS) * 100));
+    const low = t.seconds < FULL_SECONDS * 0.15;
+
+    textEl.textContent = fmt(t.seconds);
+    progressEl.style.width = pct + '%';
+    timerEl.classList.toggle('low', low);
+    progressEl.classList.toggle('low', low);
+  });
 }
 
 render();
