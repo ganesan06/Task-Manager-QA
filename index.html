@@ -200,6 +200,25 @@
   }
   .progress-fill.low{ background:var(--red); }
 
+  .complete-btn{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    width:calc(100% - 24px);
+    margin:10px 12px 0;
+    border:none;
+    background:var(--green);
+    color:#fff;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:13px;
+    padding:8px 0;
+    border-radius:8px;
+    cursor:pointer;
+  }
+  .complete-btn:hover{ background:#1ba851; }
+
   .card-bottom{
     display:flex;
     justify-content:flex-end;
@@ -216,7 +235,10 @@
     padding:5px 12px;
     border-radius:6px;
     text-transform:uppercase;
+    border:none;
+    cursor:pointer;
   }
+  .tag:hover{ filter:brightness(1.1); }
   .tag.me{ background:var(--blue-dark); }
   .remove-btn{
     border:none;
@@ -394,16 +416,16 @@ function defaultTasks(){
   const deadline = now + FULL_SECONDS * 1000;
   const shortDeadline = now + 2 * 60 * 60 * 1000;
   return [
-    { id:6,  title:'Task 6',  col:'red',   deadline, owner:'Assigned to me', me:true },
-    { id:7,  title:'Task 7',  col:'red',   deadline, owner:'Assigned to me', me:true },
-    { id:8,  title:'Task 8',  col:'red',   deadline, owner:'Assigned to me', me:true },
-    { id:9,  title:'Task 9',  col:'red',   deadline, owner:'Assigned to me', me:true },
-    { id:10, title:'Task 10', col:'red',   deadline, owner:'Assigned to me', me:true },
-    { id:5,  title:'Task 5',  col:'amber', deadline, owner:'Assigned', me:false },
-    { id:4,  title:'Task 4',  col:'amber', deadline, owner:'Assigned', me:false },
-    { id:2,  title:'Task 2',  col:'mint',  deadline, owner:'Assigned', me:false },
-    { id:3,  title:'Task 3',  col:'mint',  deadline, owner:'Assigned', me:false },
-    { id:1,  title:'Task 1',  col:'green', deadline: shortDeadline, owner:'Assigned', me:false },
+    { id:6,  title:'Task 6',  col:'red',   deadline, owner:'Assigned', me:true },
+    { id:7,  title:'Task 7',  col:'red',   deadline, owner:'Assigned', me:true },
+    { id:8,  title:'Task 8',  col:'red',   deadline, owner:'Assigned', me:true },
+    { id:9,  title:'Task 9',  col:'red',   deadline, owner:'Assigned', me:true },
+    { id:10, title:'Task 10', col:'red',   deadline, owner:'Assigned', me:true },
+    { id:5,  title:'Task 5',  col:'amber', deadline, owner:'Person 1', me:false },
+    { id:4,  title:'Task 4',  col:'amber', deadline, owner:'Person 1', me:false },
+    { id:2,  title:'Task 2',  col:'mint',  deadline, owner:'Person 1', me:false },
+    { id:3,  title:'Task 3',  col:'mint',  deadline, owner:'Person 1', me:false },
+    { id:1,  title:'Task 1',  col:'green', deadline: shortDeadline, owner:'Person 1', me:false },
   ];
 }
 
@@ -463,7 +485,15 @@ function render(){
       col.classList.remove('dragover');
       const id = parseInt(e.dataTransfer.getData('text/plain'), 10);
       const task = tasks.find(t => t.id === id);
-      if(task){ task.col = colDef.id; saveState(); render(); }
+      if(task){
+        task.col = colDef.id;
+        if(colDef.id === 'red'){
+          task.owner = 'Assigned to me';
+          task.me = true;
+        }
+        saveState();
+        render();
+      }
     });
 
     const header = document.createElement('div');
@@ -487,15 +517,20 @@ function render(){
       const pct = Math.max(0, Math.min(100, (secondsLeft / FULL_SECONDS) * 100));
       const low = secondsLeft <= LOW_TIME_THRESHOLD_SECONDS;
 
+      const completeBtn = colDef.id === 'mint'
+        ? `<button class="complete-btn" data-complete="${task.id}">&#10003; Complete</button>`
+        : '';
+
       card.innerHTML = `
         <div class="card-top">
           <div class="timer ${low ? 'low' : ''}" data-timer="${task.id}"><span class="tdot"></span><span data-timer-text="${task.id}">${fmt(secondsLeft)}</span></div>
           <p class="card-title">${task.title}</p>
           <div class="progress-track"><div class="progress-fill ${low?'low':''}" data-progress="${task.id}" style="width:${pct}%"></div></div>
         </div>
+        ${completeBtn}
         <div class="card-bottom">
           <button class="remove-btn" title="Remove card" data-remove="${task.id}">&times;</button>
-          <span class="tag ${task.me ? 'me' : ''}">${task.owner}</span>
+          <button class="tag ${task.me ? 'me' : ''}" data-assign="${task.id}">${task.owner}</button>
         </div>
       `;
 
@@ -526,13 +561,37 @@ function render(){
     });
   });
 
+  board.querySelectorAll('[data-assign]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const id = parseInt(e.currentTarget.dataset.assign, 10);
+      const task = tasks.find(t => t.id === id);
+      if(!task) return;
+      task.owner = 'Assigned';
+      task.me = true;
+      task.col = 'amber';
+      saveState();
+      render();
+    });
+  });
+
+  board.querySelectorAll('[data-complete]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const id = parseInt(e.currentTarget.dataset.complete, 10);
+      const task = tasks.find(t => t.id === id);
+      if(!task) return;
+      task.col = 'green';
+      saveState();
+      render();
+    });
+  });
+
   board.querySelectorAll('[data-add]').forEach(btn => {
     btn.addEventListener('click', () => {
       const colId = btn.dataset.add;
       const input = board.querySelector(`[data-input="${colId}"]`);
       const val = input.value.trim();
       if(!val) return;
-      tasks.push({ id: nextId++, title: val, col: colId, deadline: Date.now() + FULL_SECONDS * 1000, owner:'Assigned to me', me:true });
+      tasks.push({ id: nextId++, title: val, col: colId, deadline: Date.now() + FULL_SECONDS * 1000, owner:'Assigned', me:true });
       saveState();
       render();
     });
