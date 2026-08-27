@@ -709,17 +709,24 @@ function render(){
     header.className = 'col-header';
     header.innerHTML = `<span>${colDef.label}</span><span class="count">${colTasks.length}</span>`;
     col.appendChild(header);
- 
+
     colTasks.forEach(task => {
       const card = document.createElement('div');
       card.className = 'card';
       card.draggable = true;
       card.dataset.id = task.id;
- 
+      
+      // Open empty task page when clicking a task
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('button')) return;
+        window.location.href = 'task_page.html';
+      });
+      
       card.addEventListener('dragstart', e => {
         e.dataTransfer.setData('text/plain', task.id);
         setTimeout(() => card.classList.add('dragging'), 0);
       });
+      
       card.addEventListener('dragend', () => card.classList.remove('dragging'));
  
       const { seconds: secondsLeft, paused } = getQueueDisplay(task, colTasks);
