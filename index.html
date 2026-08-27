@@ -1,1064 +1,116 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Task Manager QA</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --bg: #EEECE4;
-    --panel: #F7F5EF;
-    --card: #FFFFFF;
-    --card-body: #E7E4DA;
-    --ink: #1B1B18;
-    --ink-soft: #6B685F;
-    --line: #D8D5C9;
-    --blue: #0B6BFF;
-    --blue-dark: #0A54C7;
- 
-    --red: #E5484D;
-    --red-ink: #4B0D0F;
-    --amber: #F5A524;
-    --amber-ink: #4A2E02;
-    --mint: #6FE3C0;
-    --mint-ink: #063D30;
-    --green: #22C55E;
-    --green-ink: #0B3A1B;
-  }
- 
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
-  body{
-    background:var(--bg);
-    font-family:'Inter',sans-serif;
-    color:var(--ink);
-    min-height:100vh;
-  }
- 
-  .topbar{
-    background:var(--blue);
-    background-image:linear-gradient(180deg,var(--blue),var(--blue-dark));
-    padding:16px 28px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    color:#fff;
-  }
-  .topbar .brand{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    font-family:'Space Grotesk',sans-serif;
-    font-weight:700;
-    font-size:19px;
-    letter-spacing:0.02em;
-  }
-  .brand .dot{
-    width:9px;height:9px;border-radius:50%;
-    background:#fff;
-    animation:pulse 1.6s ease-in-out infinite;
-  }
-  @keyframes pulse{
-    0%,100%{opacity:1; box-shadow:0 0 0 0 rgba(255,255,255,0.5);}
-    50%{opacity:0.55; box-shadow:0 0 0 6px rgba(255,255,255,0);}
-  }
-  .topbar .clock{
-    font-family:'JetBrains Mono',monospace;
-    font-size:14px;
-    letter-spacing:0.03em;
-    opacity:0.92;
-  }
- 
-  .icon-bar{
-    display:flex;
-    align-items:center;
-    gap:6px;
-    margin-left:6px;
-    padding-left:14px;
-    border-left:1px solid rgba(255,255,255,0.25);
-  }
-  .icon-btn{
-    width:32px; height:32px;
-    border-radius:8px;
-    border:none;
-    background:transparent;
-    color:#fff;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    cursor:pointer;
-    transition:background 0.15s ease;
-  }
-  .icon-btn:hover{ background:rgba(255,255,255,0.16); }
-  .icon-btn svg{ width:17px; height:17px; }
- 
-  .ist-clock{
-    display:flex;
-    flex-direction:column;
-    align-items:flex-start;
-    line-height:1.1;
-    padding:0 10px;
-  }
-  .ist-clock .ist-time{
-    font-family:'JetBrains Mono',monospace;
-    font-size:14px;
-    font-weight:600;
-    color:#fff;
-    letter-spacing:0.02em;
-  }
-  .ist-clock .ist-label{
-    font-size:9px;
-    font-weight:600;
-    letter-spacing:0.06em;
-    color:rgba(255,255,255,0.7);
-    text-transform:uppercase;
-  }
- 
-  .board{
-    display:grid;
-    grid-template-columns:repeat(4,minmax(240px,1fr));
-    gap:22px;
-    padding:26px;
-    align-items:start;
-  }
-  @media (max-width:1000px){
-    .board{grid-template-columns:repeat(2,1fr);}
-  }
-  @media (max-width:640px){
-    .board{grid-template-columns:1fr;}
-  }
- 
-  .col{
-    background:var(--panel);
-    border-radius:14px;
-    border:1px solid var(--line);
-    padding:10px;
-    min-height:120px;
-    transition:background 0.15s ease;
-  }
-  .col.dragover{
-    background:#E4F0FF;
-    outline:2px dashed var(--blue);
-    outline-offset:-2px;
-  }
- 
-  .col-header{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding:14px 18px;
-    border-radius:10px;
-    margin-bottom:12px;
-    font-family:'Space Grotesk',sans-serif;
-    font-weight:600;
-    font-size:15px;
-    letter-spacing:0.03em;
-    text-transform:uppercase;
-  }
-  .col-header .count{
-    width:26px;height:26px;
-    border-radius:50%;
-    background:#fff;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-family:'JetBrains Mono',monospace;
-    font-weight:700;
-    font-size:13px;
-  }
- 
-  .col[data-status="red"] .col-header{ background:var(--red); color:#fff; }
-  .col[data-status="red"] .col-header .count{ color:var(--red-ink); }
-  .col[data-status="amber"] .col-header{ background:var(--amber); color:var(--amber-ink); }
-  .col[data-status="amber"] .col-header .count{ color:var(--amber-ink); }
-  .col[data-status="mint"] .col-header{ background:var(--mint); color:var(--mint-ink); }
-  .col[data-status="mint"] .col-header .count{ color:var(--mint-ink); }
-  .col[data-status="green"] .col-header{ background:var(--green); color:#fff; }
-  .col[data-status="green"] .col-header .count{ color:var(--green-ink); }
- 
-  .card{
-    background:var(--card);
-    border:1px solid var(--line);
-    border-radius:10px;
-    margin-bottom:12px;
-    cursor:grab;
-    overflow:hidden;
-    transition:box-shadow 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
-  }
-  .card:active{cursor:grabbing;}
-  .card:hover{
-    box-shadow:0 4px 14px rgba(0,0,0,0.08);
-    border-color:#B9B5A5;
-  }
-  .card.dragging{
-    opacity:0.4;
-  }
- 
-  .card-top{
-    background:var(--card-body);
-    padding:16px 14px 22px;
-    position:relative;
-  }
-  .check-badge{
-    width:26px; height:26px;
-    border-radius:50%;
-    background:var(--mint);
-    color:var(--mint-ink);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:14px;
-    font-weight:700;
-    line-height:1;
-    border:none;
-    cursor:pointer;
-    padding:0;
-    flex-shrink:0;
-  }
-  .check-badge:hover{ filter:brightness(1.08); }
- 
-  .eye-badge{
-    width:26px; height:26px;
-    border-radius:50%;
-    background:var(--panel);
-    border:1px solid var(--line);
-    color:var(--ink-soft);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    cursor:pointer;
-    padding:0;
-    flex-shrink:0;
-  }
-  .eye-badge svg{ width:14px; height:14px; }
-  .eye-badge:hover{ background:var(--blue); border-color:var(--blue); color:#fff; }
- 
-  .icon-btn{ position:relative; }
-  .icon-btn .badge-count{
-    position:absolute;
-    top:1px; right:1px;
-    min-width:15px; height:15px;
-    padding:0 3px;
-    border-radius:8px;
-    background:var(--red);
-    color:#fff;
-    font-size:10px;
-    font-weight:700;
-    line-height:15px;
-    text-align:center;
-  }
- 
-  .hidden-list{ max-height:280px; overflow-y:auto; }
-  .hidden-item{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:10px;
-    padding:9px 0;
-    border-bottom:1px solid var(--line);
-  }
-  .hidden-item:last-child{ border-bottom:none; }
-  .hidden-item-title{
-    font-weight:600;
-    font-size:14px;
-  }
-  .hidden-item-col{
-    font-size:11px;
-    color:var(--ink-soft);
-    text-transform:uppercase;
-    letter-spacing:0.03em;
-  }
-  .restore-btn{
-    border:none;
-    background:var(--blue);
-    color:#fff;
-    font-size:12px;
-    font-weight:600;
-    padding:6px 12px;
-    border-radius:7px;
-    cursor:pointer;
-    flex-shrink:0;
-  }
-  .restore-btn:hover{ background:var(--blue-dark); }
-  .card-title{
-    font-family:'Space Grotesk',sans-serif;
-    font-weight:600;
-    font-size:20px;
-    margin:0 0 2px;
-  }
-  .card-id{
-    font-family:'JetBrains Mono',monospace;
-    font-size:11px;
-    color:var(--ink-soft);
-    margin:0 0 14px;
-    letter-spacing:0.02em;
-  }
-  .timer{
-    position:absolute;
-    top:12px; right:12px;
-    background:#DCFCE7;
-    border:1px solid #BBF0CE;
-    border-radius:6px;
-    padding:3px 8px;
-    font-family:'JetBrains Mono',monospace;
-    font-size:12px;
-    font-weight:500;
-    color:#14532D;
-    display:flex;
-    align-items:center;
-    gap:5px;
-  }
-  .timer.low{ background:#FEE2E2; color:var(--red-ink); border-color:#F3B9BA; }
-  .timer .tdot{
-    width:5px;height:5px;border-radius:50%;
-    background:#16A34A;
-  }
-  .timer.low .tdot{
-    background:var(--red);
-    animation:pulse 1s ease-in-out infinite;
-  }
- 
-  .progress-track{
-    position:absolute;
-    left:0; bottom:0;
-    width:100%; height:3px;
-    background:rgba(0,0,0,0.06);
-  }
-  .progress-fill{
-    height:100%;
-    background:#22C55E;
-    transition:width 1s linear, background 0.3s ease;
-  }
-  .progress-fill.low{ background:var(--red); }
- 
-  .card-bottom{
-    display:flex;
-    justify-content:flex-end;
-    align-items:center;
-    padding:9px 12px;
-    gap:6px;
-  }
-  .tag{
-    font-size:12px;
-    font-weight:600;
-    letter-spacing:0.02em;
-    color:#fff;
-    background:var(--blue);
-    padding:5px 12px;
-    border-radius:6px;
-    text-transform:uppercase;
-    border:none;
-    cursor:pointer;
-  }
-  .tag:hover{ filter:brightness(1.1); }
-  .tag.me{ background:var(--blue-dark); }
-  .remove-btn{
-    border:none;
-    background:transparent;
-    color:var(--ink-soft);
-    font-size:16px;
-    line-height:1;
-    cursor:pointer;
-    padding:4px 6px;
-    border-radius:6px;
-  }
-  .remove-btn:hover{ background:rgba(0,0,0,0.06); color:var(--red); }
- 
-  .add-trigger-btn{
-    display:block;
-    width:100%;
-    margin:4px 0 2px;
-    border:1px dashed var(--line);
-    background:transparent;
-    color:var(--ink-soft);
-    font-weight:600;
-    font-size:13px;
-    padding:9px 0;
-    border-radius:8px;
-    cursor:pointer;
-  }
-  .add-trigger-btn:hover{ background:var(--card-body); color:var(--ink); border-color:#B9B5A5; }
- 
-  .field-label{
-    display:block;
-    font-size:12px;
-    font-weight:600;
-    color:var(--ink-soft);
-    margin-bottom:4px;
-  }
-  .field-input{
-    width:100%;
-    border:1px solid var(--line);
-    border-radius:8px;
-    padding:8px 10px;
-    font-family:'Inter',sans-serif;
-    font-size:13px;
-    background:#fff;
-    outline:none;
-    margin-bottom:14px;
-  }
-  .field-input:focus{ border-color:var(--blue); }
-  .field-input.mono{ font-family:'JetBrains Mono',monospace; }
-  .field-error{
-    color:var(--red);
-    font-size:12px;
-    margin:-8px 0 4px;
-    display:none;
-  }
-  .field-error.show{ display:block; }
- 
-  .empty-hint{
-    text-align:center;
-    color:var(--ink-soft);
-    font-size:12px;
-    padding:14px 4px 6px;
-  }
- 
-  .hidden{ display:none !important; }
- 
-  .modal-overlay{
-    position:fixed;
-    inset:0;
-    background:rgba(27,27,24,0.45);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    z-index:100;
-  }
-  .modal-overlay.hidden{ display:none; }
-  .modal-box{
-    background:#fff;
-    border-radius:14px;
-    padding:22px 22px 18px;
-    width:min(320px, 90vw);
-    box-shadow:0 12px 32px rgba(0,0,0,0.18);
-  }
-  .modal-title{
-    font-family:'Space Grotesk',sans-serif;
-    font-weight:600;
-    font-size:17px;
-    margin:0 0 8px;
-  }
-  .modal-body{
-    font-size:14px;
-    color:var(--ink-soft);
-    margin:0 0 20px;
-    line-height:1.45;
-  }
-  .modal-body strong{ color:var(--ink); }
-  .modal-actions{
-    display:flex;
-    justify-content:flex-end;
-    gap:10px;
-  }
-  .modal-actions button{
-    border:none;
-    border-radius:8px;
-    padding:9px 16px;
-    font-size:13px;
-    font-weight:600;
-    cursor:pointer;
-  }
-  .modal-cancel{
-    background:var(--panel);
-    color:var(--ink);
-  }
-  .modal-cancel:hover{ background:var(--card-body); }
-  .modal-confirm{
-    background:var(--red);
-    color:#fff;
-  }
-  .modal-confirm:hover{ background:#c93f43; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Details</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+    }
+
+    /* Top blue bar */
+    .topbar {
+      height: 52px;
+      background: #1976c9;
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      color: white;
+      font-weight: bold;
+    }
+
+    /* Task information */
+    .task-info {
+      height: 45px;
+      background: #e5e5e5;
+      border-bottom: 1px solid #999;
+      display: flex;
+      align-items: center;
+      padding: 0 30px;
+      gap: 40px;
+      font-size: 15px;
+    }
+
+    /* Empty workspace */
+    .workspace {
+      min-height: calc(100vh - 97px);
+      padding: 30px;
+      background: #fafafa;
+    }
+
+    .back-button {
+      padding: 8px 16px;
+      border: none;
+      background: #1976c9;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
 </head>
+
 <body>
- 
-<div class="topbar">
-    <div class="brand"><span class=""></span>TASK MANAGER</div>
-    <div class="icon-bar">
-      <button class="icon-btn" id="homeBtn" title="Home">
-         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:21px; height:21px;">
-    <path d="M3 11l9-8 9 8"/>
-    <path d="M5 10v10h14V10"/>
-    <path d="M9 20v-6h6v6"/>
-  </svg>
-</button>
-      <button class="icon-btn" id="eyeBtn" title="Hidden tasks">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
-        <span class="badge-count hidden" id="hiddenBadgeCount">0</span>
-      </button>
-      <div class="ist-clock">
-        <span class="ist-time" id="istTime">00:00:00</span>
-        <span class="ist-label">IST</span>
-      </div>
-      <button class="icon-btn" id="reportBtn" title="Reports">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-      </button>
-      <button class="icon-btn" id="settingsBtn" title="Settings">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      </button>
-    </div>
-  </div>
-</div>
- 
-<div class="board" id="board">
-  <div class="empty-hint" style="grid-column: 1 / -1; padding: 40px 0;">Loading board…</div>
-</div>
- 
-<div class="modal-overlay hidden" id="addTaskModal">
-  <div class="modal-box">
-    <p class="modal-title">Add task</p>
-    <div class="modal-body">
-      <label class="field-label" for="addTaskTitleInput">Task Title</label>
-      <input type="text" class="field-input" id="addTaskTitleInput" placeholder="e.g. Task 11" />
-      <label class="field-label" for="addTaskIdInput">Task ID</label>
-      <input type="number" class="field-input mono" id="addTaskIdInput" placeholder="e.g. 11" />
-      <p class="field-error" id="addTaskError"></p>
-    </div>
-    <div class="modal-actions">
-      <button class="modal-cancel" id="addTaskModalCancel">Cancel</button>
-      <button class="modal-confirm" id="addTaskModalConfirm" style="background:var(--blue);">Add</button>
-    </div>
-  </div>
-</div>
- 
-<div class="modal-overlay hidden" id="hiddenModal">
-  <div class="modal-box">
-    <p class="modal-title">Hidden tasks</p>
-    <div class="hidden-list" id="hiddenList"></div>
-    <div class="modal-actions">
-      <button class="modal-cancel" id="hiddenModalClose">Close</button>
-    </div>
-  </div>
-</div>
- 
-<div class="modal-overlay hidden" id="confirmModal">
-  <div class="modal-box">
-    <p class="modal-title">Delete card</p>
-    <p class="modal-body">Do you want to delete <strong id="confirmModalTitle"></strong>? This can't be undone.</p>
-    <div class="modal-actions">
-      <button class="modal-cancel" id="confirmModalCancel">Cancel</button>
-      <button class="modal-confirm" id="confirmModalConfirm">Delete</button>
-    </div>
-  </div>
-</div>
- 
-<script>
-const STORAGE_KEY = 'board-state';
-const FULL_SECONDS = 43199;
-const LOW_TIME_THRESHOLD_SECONDS = 4 * 60 * 60;
- 
-const hasArtifactStorage = typeof window.storage !== 'undefined'
-  && typeof window.storage.get === 'function'
-  && typeof window.storage.set === 'function';
- 
-async function storageGet(key){
-  if(hasArtifactStorage){
-    try{
-      const result = await window.storage.get(key, false);
-      return result ? result.value : null;
-    }catch(e){
-      return null;
-    }
-  }
-  try{
-    return window.localStorage.getItem(key);
-  }catch(e){
-    return null;
-  }
-}
- 
-async function storageSet(key, value){
-  if(hasArtifactStorage){
-    try{
-      await window.storage.set(key, value, false);
-      return;
-    }catch(e){
-      console.error('window.storage save failed, falling back to localStorage', e);
-    }
-  }
-  try{
-    window.localStorage.setItem(key, value);
-  }catch(e){
-    console.error('localStorage save failed', e);
-  }
-}
- 
-const COLUMNS = [
-  { id:'red',   label:'Backlog',    status:'red'   },
-  { id:'amber', label:'Assigned',   status:'amber' },
-  { id:'mint',  label:'Checkout',  status:'mint'  },
-  { id:'green', label:'Completed',       status:'green' },
-];
- 
-function defaultTasks(){
-  const now = Date.now();
-  const deadline = now + FULL_SECONDS * 1000;
-  const shortDeadline = now + 2 * 60 * 60 * 1000;
-  return [
-    { id:6,  title:'Task 6',  col:'red',   deadline, owner:'Assigned', me:true },
-    { id:7,  title:'Task 7',  col:'red',   deadline, owner:'Assigned', me:true },
-    { id:8,  title:'Task 8',  col:'red',   deadline, owner:'Assigned', me:true },
-    { id:9,  title:'Task 9',  col:'red',   deadline, owner:'Assigned', me:true },
-    { id:10, title:'Task 10', col:'red',   deadline, owner:'Assigned', me:true },
-    { id:5,  title:'Task 5',  col:'amber', deadline, owner:'Person 1', me:false },
-    { id:4,  title:'Task 4',  col:'amber', deadline, owner:'Person 1', me:false },
-    { id:2,  title:'Task 2',  col:'mint',  deadline, owner:'Person 1', me:false },
-    { id:3,  title:'Task 3',  col:'mint',  deadline, owner:'Person 1', me:false },
-    { id:1,  title:'Task 1',  col:'green', deadline: shortDeadline, owner:'Person 1', me:false },
-  ];
-}
- 
-async function loadState(){
-  try{
-    const raw = await storageGet(STORAGE_KEY);
-    if(!raw) return { tasks: defaultTasks(), nextId: 11 };
-    const parsed = JSON.parse(raw);
-    if(!Array.isArray(parsed.tasks) || typeof parsed.nextId !== 'number'){
-      return { tasks: defaultTasks(), nextId: 11 };
-    }
-    return parsed;
-  }catch(e){
-    return { tasks: defaultTasks(), nextId: 11 };
-  }
-}
- 
-async function saveState(){
-  await storageSet(STORAGE_KEY, JSON.stringify({ tasks, nextId }));
-}
- 
-let tasks = [];
-let nextId = 11;
- 
-function remainingSeconds(task){
-  return Math.max(0, Math.round((task.deadline - Date.now()) / 1000));
-}
- 
-function getQueueDisplay(task, columnTasks){
-  const isCheckout = task.col === 'mint';
- 
-  if(!isCheckout){
-    if(task.pausedRemaining != null){
-      task.deadline = Date.now() + task.pausedRemaining * 1000;
-      task.pausedRemaining = null;
-    }
-    return { seconds: remainingSeconds(task), paused: false };
-  }
- 
-  const isFirstInQueue = columnTasks.length > 0 && columnTasks[0].id === task.id;
- 
-  if(isFirstInQueue){
-    if(task.pausedRemaining != null){
-      task.deadline = Date.now() + task.pausedRemaining * 1000;
-      task.pausedRemaining = null;
-    }
-    return { seconds: remainingSeconds(task), paused: false };
-  }
- 
-  if(task.pausedRemaining == null){
-    task.pausedRemaining = remainingSeconds(task);
-  }
-  return { seconds: task.pausedRemaining, paused: true };
-}
- 
-function fmt(s){
-  if(s < 0) s = 0;
-  const h = String(Math.floor(s/3600)).padStart(2,'0');
-  const m = String(Math.floor((s%3600)/60)).padStart(2,'0');
-  const sec = String(Math.floor(s%60)).padStart(2,'0');
-  return h+':'+m+':'+sec;
-}
- 
-const board = document.getElementById('board');
-  
-  // Open task page when clicking any task card
-  board.addEventListener('click', (e) => {
-  // Don't open the page when clicking buttons
-    if (e.target.closest('button')) return;
-    const card = e.target.closest('.card');
-    
-    if (card) {
-      window.location.href = 'task_page.html';
-    }
-  });
 
-function render(){
- 
-function render(){
-  board.innerHTML = '';
- 
-  COLUMNS.forEach(colDef => {
-    const colTasks = tasks.filter(t => t.col === colDef.id && !t.hidden);
- 
-    const col = document.createElement('div');
-    col.className = 'col';
-    col.dataset.status = colDef.id;
-    col.dataset.colid = colDef.id;
- 
-    col.addEventListener('dragover', e => {
-      e.preventDefault();
-      col.classList.add('dragover');
-    });
-    col.addEventListener('dragleave', () => col.classList.remove('dragover'));
-    col.addEventListener('drop', e => {
-      e.preventDefault();
-      col.classList.remove('dragover');
-      const id = parseInt(e.dataTransfer.getData('text/plain'), 10);
-      const task = tasks.find(t => t.id === id);
-      if(task){
-        task.col = colDef.id;
-        if(colDef.id === 'red'){
-          task.owner = 'Assigned to me';
-          task.me = true;
+  <!-- Top Bar -->
+  <div class="topbar">
+    TASK MANAGER
+  </div>
+
+  <!-- Task Name and ID -->
+  <div class="task-info">
+    <span id="taskName">Task name: Loading...</span>
+    <span id="taskId">Task ID: Loading...</span>
+  </div>
+
+  <!-- Empty Area -->
+  <div class="workspace">
+    <button class="back-button" onclick="window.location.href='index.html'">
+      ← Back to Tasks
+    </button>
+  </div>
+
+  <script>
+    // Get Task ID from URL
+    const params = new URLSearchParams(window.location.search);
+    const clickedTaskId = params.get('id');
+
+    const STORAGE_KEY = 'board-state';
+
+    // Get saved task data
+    const savedState = localStorage.getItem(STORAGE_KEY);
+
+    if (savedState && clickedTaskId) {
+      try {
+        const state = JSON.parse(savedState);
+
+        const task = state.tasks.find(
+          t => String(t.id) === String(clickedTaskId)
+        );
+
+        if (task) {
+          document.getElementById('taskName').textContent =
+            'Task name: ' + task.title;
+
+          document.getElementById('taskId').textContent =
+            'Task ID: ' + task.id;
+        } else {
+          document.getElementById('taskName').textContent =
+            'Task not found';
+          document.getElementById('taskId').textContent = '';
         }
-        saveState();
-        render();
+      } catch (error) {
+        console.error('Error loading task:', error);
       }
-    });
- 
-    const header = document.createElement('div');
-    header.className = 'col-header';
-    header.innerHTML = `<span>${colDef.label}</span><span class="count">${colTasks.length}</span>`;
-    col.appendChild(header);
+    }
+  </script>
 
-    colTasks.forEach(task => {
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.draggable = true;
-      card.dataset.id = task.id;
-      
-      // Open empty task page when clicking a task
-      card.addEventListener('click', (e) => {
-        if (e.target.closest('button')) return;
-        window.location.href = 'task_page.html';
-      });
-      
-      card.addEventListener('dragstart', e => {
-        e.dataTransfer.setData('text/plain', task.id);
-        setTimeout(() => card.classList.add('dragging'), 0);
-      });
-      
-      card.addEventListener('dragend', () => card.classList.remove('dragging'));
- 
-      const { seconds: secondsLeft, paused } = getQueueDisplay(task, colTasks);
-      const pct = Math.max(0, Math.min(100, (secondsLeft / FULL_SECONDS) * 100));
-      const low = !paused && secondsLeft <= LOW_TIME_THRESHOLD_SECONDS;
- 
-      const checkBadge = colDef.id === 'mint'
-        ? `<button class="check-badge" title="Mark complete" data-complete="${task.id}">&#10003;</button>`
-        : '';
- 
-      const eyeIconOpen = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>`;
- 
-      const eyeBadge = colDef.id === 'red'
-        ? `<button class="eye-badge" title="Hide task" data-eye-toggle="${task.id}">${eyeIconOpen}</button>`
-        : '';
- 
-      const tagBtn = colDef.id === 'green'
-        ? ''
-        : `<button class="tag ${task.me ? 'me' : ''}" data-assign="${task.id}">${task.owner}</button>`;
- 
-      card.innerHTML = `
-        <div class="card-top">
-          <div class="timer ${low ? 'low' : ''} ${paused ? 'paused' : ''}" data-timer="${task.id}"><span class="tdot"></span><span data-timer-text="${task.id}">${paused ? 'Waiting &middot; ' + fmt(secondsLeft) : fmt(secondsLeft)}</span></div>
-          <p class="card-title">${task.title}</p>
-          <p class="card-id">ID: ${task.id}</p>
-          <div class="progress-track"><div class="progress-fill ${low?'low':''} ${paused ? 'paused' : ''}" data-progress="${task.id}" style="width:${pct}%"></div></div>
-        </div>
-        <div class="card-bottom">
-          <div style="flex:1"></div>
-          <button class="remove-btn" title="Remove card" data-remove="${task.id}">&times;</button>
-          ${eyeBadge}
-          ${checkBadge}
-          ${tagBtn}
-        </div>
-      `;
- 
-      col.appendChild(card);
-    });
- 
-    if(colTasks.length === 0){
-      const hint = document.createElement('div');
-      hint.className = 'empty-hint';
-      hint.textContent = 'No cards here';
-      col.appendChild(hint);
-    }
- 
-    if(colDef.id === 'red'){
-      const trigger = document.createElement('button');
-      trigger.className = 'add-trigger-btn';
-      trigger.textContent = '+ Add task';
-      trigger.addEventListener('click', () => openAddTaskModal());
-      col.appendChild(trigger);
-    }
- 
-    board.appendChild(col);
-  });
- 
-  board.querySelectorAll('[data-remove]').forEach(btn => {
-    btn.addEventListener('click', e => {
-      const id = parseInt(e.currentTarget.dataset.remove, 10);
-      const task = tasks.find(t => t.id === id);
-      if(task) openConfirmModal(task);
-    });
-  });
- 
-  board.querySelectorAll('[data-eye-toggle]').forEach(btn => {
-    btn.addEventListener('click', e => {
-      const id = parseInt(e.currentTarget.dataset.eyeToggle, 10);
-      const task = tasks.find(t => t.id === id);
-      if(!task) return;
-      task.hidden = true;
-      saveState();
-      render();
-      updateHiddenBadge();
-    });
-  });
- 
-  board.querySelectorAll('[data-assign]').forEach(btn => {
-    btn.addEventListener('click', e => {
-      const id = parseInt(e.currentTarget.dataset.assign, 10);
-      const task = tasks.find(t => t.id === id);
-      if(!task) return;
-      task.owner = 'Assigned';
-      task.me = true;
-      task.col = 'amber';
-      saveState();
-      render();
-    });
-  });
- 
-  board.querySelectorAll('[data-complete]').forEach(btn => {
-    btn.addEventListener('click', e => {
-      const id = parseInt(e.currentTarget.dataset.complete, 10);
-      const task = tasks.find(t => t.id === id);
-      if(!task) return;
-      task.col = 'green';
-      saveState();
-      render();
-    });
-  });
-}
- 
-function tick(){
-  tasks.forEach(t => {
-    const timerEl = board.querySelector(`[data-timer="${t.id}"]`);
-    const textEl = board.querySelector(`[data-timer-text="${t.id}"]`);
-    const progressEl = board.querySelector(`[data-progress="${t.id}"]`);
-    if(!timerEl || !textEl || !progressEl) return;
- 
-    const secondsLeft = remainingSeconds(t);
-    const pct = Math.max(0, Math.min(100, (secondsLeft / FULL_SECONDS) * 100));
-    const low = secondsLeft <= LOW_TIME_THRESHOLD_SECONDS;
- 
-    textEl.textContent = fmt(secondsLeft);
-    progressEl.style.width = pct + '%';
-    timerEl.classList.toggle('low', low);
-    progressEl.classList.toggle('low', low);
-  });
-}
- 
-const confirmModal = document.getElementById('confirmModal');
-const confirmModalTitle = document.getElementById('confirmModalTitle');
-const confirmModalCancel = document.getElementById('confirmModalCancel');
-const confirmModalConfirm = document.getElementById('confirmModalConfirm');
-let pendingDeleteId = null;
- 
-function openConfirmModal(task){
-  pendingDeleteId = task.id;
-  confirmModalTitle.textContent = task.title;
-  confirmModal.classList.remove('hidden');
-}
- 
-function closeConfirmModal(){
-  pendingDeleteId = null;
-  confirmModal.classList.add('hidden');
-}
- 
-confirmModalCancel.addEventListener('click', closeConfirmModal);
- 
-confirmModalConfirm.addEventListener('click', () => {
-  if(pendingDeleteId !== null){
-    tasks = tasks.filter(t => t.id !== pendingDeleteId);
-    saveState();
-    render();
-  }
-  closeConfirmModal();
-});
- 
-confirmModal.addEventListener('click', e => {
-  if(e.target === confirmModal) closeConfirmModal();
-});
- 
-document.addEventListener('keydown', e => {
-  if(e.key === 'Escape' && !confirmModal.classList.contains('hidden')) closeConfirmModal();
-});
- 
-function updateIstClock(){
-  const el = document.getElementById('istTime');
-  if(!el) return;
-  const istString = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Asia/Kolkata',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  }).format(new Date());
-  el.textContent = istString;
-}
- 
-const hiddenModal = document.getElementById('hiddenModal');
-const hiddenList = document.getElementById('hiddenList');
-const hiddenBadgeCount = document.getElementById('hiddenBadgeCount');
-const eyeBtn = document.getElementById('eyeBtn');
-const colLabelById = Object.fromEntries(COLUMNS.map(c => [c.id, c.label]));
- 
-function updateHiddenBadge(){
-  const count = tasks.filter(t => t.hidden).length;
-  hiddenBadgeCount.textContent = count;
-  hiddenBadgeCount.classList.toggle('hidden', count === 0);
-}
- 
-function renderHiddenList(){
-  const hiddenTasks = tasks.filter(t => t.hidden);
-  if(hiddenTasks.length === 0){
-    hiddenList.innerHTML = `<div class="empty-hint" style="padding:20px 0;">No hidden tasks</div>`;
-    return;
-  }
-  hiddenList.innerHTML = hiddenTasks.map(t => `
-    <div class="hidden-item">
-      <div>
-        <div class="hidden-item-title">${t.title}</div>
-        <div class="hidden-item-col">${colLabelById[t.col] || t.col}</div>
-      </div>
-      <button class="restore-btn" data-restore="${t.id}">Restore</button>
-    </div>
-  `).join('');
- 
-  hiddenList.querySelectorAll('[data-restore]').forEach(btn => {
-    btn.addEventListener('click', e => {
-      const id = parseInt(e.currentTarget.dataset.restore, 10);
-      const task = tasks.find(t => t.id === id);
-      if(!task) return;
-      task.hidden = false;
-      saveState();
-      render();
-      updateHiddenBadge();
-      renderHiddenList();
-    });
-  });
-}
- 
-eyeBtn.addEventListener('click', () => {
-  renderHiddenList();
-  hiddenModal.classList.remove('hidden');
-});
- 
-document.getElementById('hiddenModalClose').addEventListener('click', () => {
-  hiddenModal.classList.add('hidden');
-});
-hiddenModal.addEventListener('click', e => {
-  if(e.target === hiddenModal) hiddenModal.classList.add('hidden');
-});
-document.addEventListener('keydown', e => {
-  if(e.key === 'Escape' && !hiddenModal.classList.contains('hidden')) hiddenModal.classList.add('hidden');
-});
- 
-const addTaskModal = document.getElementById('addTaskModal');
-const addTaskTitleInput = document.getElementById('addTaskTitleInput');
-const addTaskIdInput = document.getElementById('addTaskIdInput');
-const addTaskError = document.getElementById('addTaskError');
-const addTaskModalConfirm = document.getElementById('addTaskModalConfirm');
-const addTaskModalCancel = document.getElementById('addTaskModalCancel');
- 
-function openAddTaskModal(){
-  addTaskTitleInput.value = '';
-  addTaskIdInput.value = '';
-  addTaskError.textContent = '';
-  addTaskError.classList.remove('show');
-  addTaskModal.classList.remove('hidden');
-  addTaskTitleInput.focus();
-}
- 
-function closeAddTaskModal(){
-  addTaskModal.classList.add('hidden');
-}
- 
-function showAddTaskError(msg){
-  addTaskError.textContent = msg;
-  addTaskError.classList.add('show');
-}
- 
-function submitAddTask(){
-  const title = addTaskTitleInput.value.trim();
-  const idRaw = addTaskIdInput.value.trim();
- 
-  if(!title){
-    showAddTaskError('Please enter a task title.');
-    return;
-  }
-  if(!idRaw){
-    showAddTaskError('Please enter a task ID.');
-    return;
-  }
-  const id = parseInt(idRaw, 10);
-  if(Number.isNaN(id)){
-    showAddTaskError('Task ID must be a number.');
-    return;
-  }
-  if(tasks.some(t => t.id === id)){
-    showAddTaskError('That task ID is already in use.');
-    return;
-  }
- 
-  tasks.push({
-    id,
-    title,
-    col: 'red',
-    deadline: Date.now() + FULL_SECONDS * 1000,
-    owner: 'Assigned',
-    me: true
-  });
-  nextId = Math.max(nextId, id + 1);
-  saveState();
-  render();
-  closeAddTaskModal();
-}
- 
-addTaskModalConfirm.addEventListener('click', submitAddTask);
-addTaskModalCancel.addEventListener('click', closeAddTaskModal);
-addTaskModal.addEventListener('click', e => {
-  if(e.target === addTaskModal) closeAddTaskModal();
-});
-[addTaskTitleInput, addTaskIdInput].forEach(input => {
-  input.addEventListener('keydown', e => {
-    if(e.key === 'Enter'){
-      e.preventDefault();
-      submitAddTask();
-    }
-  });
-});
-document.addEventListener('keydown', e => {
-  if(e.key === 'Escape' && !addTaskModal.classList.contains('hidden')) closeAddTaskModal();
-});
- 
-async function init(){
-  const state = await loadState();
-  tasks = state.tasks;
-  nextId = state.nextId;
-  render();
-  setInterval(tick, 1000);
- 
-  updateIstClock();
-  setInterval(updateIstClock, 1000);
- 
-  updateHiddenBadge();
-}
- 
-init();
-</script>
- 
 </body>
 </html>
