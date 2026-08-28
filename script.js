@@ -299,6 +299,7 @@ function tick(){
   if(isDragging) return;
   if(currentDetailTaskId !== null){
     updateDetailTimerPill();
+    updateMeasureTimerDisplay();
     return;
   }
   render();
@@ -399,6 +400,20 @@ eyeBtn.addEventListener('click', () => {
   renderHiddenList();
   hiddenModal.classList.remove('hidden');
 });
+
+const homeBtn = document.getElementById('homeBtn');
+const brandLogo = document.getElementById('brandLogo');
+function goToBoard(){
+  if(currentDetailTaskId !== null){
+    closeDetailView();
+  } else {
+    board.classList.remove('hidden');
+    detailView.classList.add('hidden');
+    render();
+  }
+}
+homeBtn.addEventListener('click', goToBoard);
+brandLogo.addEventListener('click', goToBoard);
 
 document.getElementById('hiddenModalClose').addEventListener('click', () => {
   hiddenModal.classList.add('hidden');
@@ -505,9 +520,36 @@ const panelToggleIcon = document.getElementById('panelToggleIcon');
 const taskCanvas = document.getElementById('taskCanvas');
 const canvasCtx = taskCanvas.getContext('2d');
 
+function defaultSubtaskGroups(taskId){
+  // Task id 7 -> groups 71, 72, 73 with subtasks 71.1, 72.2, 73.3
+  const groups = [];
+  for(let n = 1; n <= 3; n++){
+    const groupId = `${taskId}${n}`;
+    const subtaskId = `${groupId}.${n}`;
+    groups.push({
+      id: groupId,
+      name: `Subtask ${groupId}`,
+      subtasks: [
+        { id: subtaskId, title: `Subtask ${subtaskId}` }
+      ]
+    });
+  }
+  return groups;
+}
+
 function ensureTaskDetailDefaults(task){
-  if(!Array.isArray(task.subtaskGroups)) task.subtaskGroups = [];
+  if(!Array.isArray(task.subtaskGroups) || task.subtaskGroups.length === 0){
+    task.subtaskGroups = defaultSubtaskGroups(task.id);
+  }
   if(!Array.isArray(task.canvasShapes)) task.canvasShapes = [];
+  if(!task.measureTimer){
+    task.measureTimer = { elapsedMs: 0, running: false, startedAt: null };
+  }
+}
+
+function isTaskAssigned(task){
+  // A task still sitting in the Backlog column has not been assigned yet.
+  return task.col !== 'red';
 }
 
 function getCurrentTask(){
@@ -517,7 +559,10 @@ function getCurrentTask(){
 function openDetailView(taskId){
   const task = tasks.find(t => t.id === taskId);
   if(!task) return;
+  const isFirstOpen = !Array.isArray(task.subtaskGroups) || task.subtaskGroups.length === 0;
   ensureTaskDetailDefaults(task);
+  if(isFirstOpen) saveState();
+
   currentDetailTaskId = taskId;
   currentTool = 'line';
   if(!canvasHistoryByTask[taskId]) canvasHistoryByTask[taskId] = { undo: [], redo: [] };
@@ -532,6 +577,8 @@ function openDetailView(taskId){
   setActiveTool('line');
   resizeCanvasToContainer();
   redrawCanvas();
+  updateMeasureTimerDisplay();
+  updateMeasureButtonsState();
 }
 
 function closeDetailView(){
@@ -788,6 +835,10 @@ taskCanvas.addEventListener('mousedown', e => {
   const y = e.clientY - rect.top;
 
   if(currentTool === 'line'){
+    if(!isTaskAssigned(task)){
+      showAssignRequiredPopup();
+      return;
+    }
     drawStart = { x, y };
   } else if(currentTool === 'delete'){
     const hitIndex = task.canvasShapes.findIndex(s => distanceToSegment(x, y, s.x1, s.y1, s.x2, s.y2) < 6);
@@ -846,6 +897,102 @@ document.getElementById('toolRedo').addEventListener('click', () => {
   task.canvasShapes = JSON.parse(hist.redo.pop());
   saveState();
   redrawCanvas();
+});
+
+/* ---- Assign-required popup ---- */
+
+const assignRequiredModal = document.getElementById('assignRequiredModal');
+
+function showAssignRequiredPopup(){
+  assignRequiredModal.classList.remove('hidden');
+}
+function closeAssignRequiredPopup(){
+  assignRequiredModal.classList.add('hidden');
+}
+document.getElementById('assignRequiredOk').addEventListener('click', closeAssignRequiredPopup);
+assignRequiredModal.addEventListener('click', e => {
+  if(e.target === assignRequiredModal) closeAssignRequiredPopup();
+});
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape' && !assignRequiredModal.classList.contains('hidden')) closeAssignRequiredPopup();
+});
+
+/* ---- Task-page measuring timer (independent stopwatch, counts up) ---- */
+
+const measureTimerDisplay = document.getElementById('measureTimerDisplay');
+const measureStartBtn = document.getElementById('measureStartBtn');
+const measurePauseBtn = document.getElementById('measurePauseBtn');
+const measureStopBtn = document.getElementById('measureStopBtn');
+const measureResetBtn = document.getElementById('measureResetBtn');
+
+function getMeasureElapsedMs(task){
+  const mt = task.measureTimer;
+  if(!mt) return 0;
+  return mt.running ? (mt.elapsedMs + (Date.now() - mt.startedAt)) : mt.elapsedMs;
+}
+
+function updateMeasureTimerDisplay(){
+  const task = getCurrentTask();
+  if(!task || !task.measureTimer){
+    measureTimerDisplay.textContent = '00:00:00';
+    return;
+  }
+  measureTimerDisplay.textContent = fmt(getMeasureElapsedMs(task) / 1000);
+}
+
+function updateMeasureButtonsState(){
+  const task = getCurrentTask();
+  const running = !!(task && task.measureTimer && task.measureTimer.running);
+  measureStartBtn.disabled = running;
+  measurePauseBtn.disabled = !running;
+  measureStopBtn.disabled = !running;
+}
+
+measureStartBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  const task = getCurrentTask();
+  if(!task) return;
+  if(!task.measureTimer) task.measureTimer = { elapsedMs: 0, running: false, startedAt: null };
+  if(task.measureTimer.running) return;
+  task.measureTimer.running = true;
+  task.measureTimer.startedAt = Date.now();
+  saveState();
+  updateMeasureTimerDisplay();
+  updateMeasureButtonsState();
+});
+
+function pauseMeasureTimer(task){
+  if(!task.measureTimer || !task.measureTimer.running) return;
+  task.measureTimer.elapsedMs += Date.now() - task.measureTimer.startedAt;
+  task.measureTimer.running = false;
+  task.measureTimer.startedAt = null;
+  saveState();
+  updateMeasureTimerDisplay();
+  updateMeasureButtonsState();
+}
+
+measurePauseBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  const task = getCurrentTask();
+  if(!task) return;
+  pauseMeasureTimer(task);
+});
+
+measureStopBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  const task = getCurrentTask();
+  if(!task) return;
+  pauseMeasureTimer(task);
+});
+
+measureResetBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  const task = getCurrentTask();
+  if(!task) return;
+  task.measureTimer = { elapsedMs: 0, running: false, startedAt: null };
+  saveState();
+  updateMeasureTimerDisplay();
+  updateMeasureButtonsState();
 });
 
 async function init(){
