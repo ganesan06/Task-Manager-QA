@@ -102,6 +102,7 @@
     white-space:nowrap;
   }
   .role-locked-btn:hover{ background:rgba(255,255,255,0.22); }
+  .role-caret{ font-size:9px; margin-left:3px; opacity:0.8; }
   .role-options{
     position:absolute;
     top:calc(100% + 6px);
