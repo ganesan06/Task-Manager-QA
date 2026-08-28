@@ -1,53 +1,51 @@
-#Task Manager QA
+# Task Manager QA
 
 A task tracking application designed to monitor tasks and measure the time taken to complete them.
 
-The application focuses on tracking the task lifecycle and providing clear visibility into how long each task takes.
+The application helps users track the complete lifecycle of a task, from the moment it is received until it is completed.
 
-##Current Features
-*Create and view tasks
-*Track task details using Task Name and Task ID
-*Record the time when a task is received
-*Start and stop task tracking
-*Track the time taken to complete a task
-*Display task status and completion information
-*View task details on a dedicated Task Page
+## Current Features
 
-##Task Time Tracking
+* Create and view tasks
+* Track tasks using Task Name and Task ID
+* Record when a task is received
+* Track start and completion time
+* Calculate the total time taken to complete a task
+* View task details on a dedicated Task Page
+* Display task status and completion information
 
-Each task can be tracked from the moment it arrives until it is completed.
+## Task Workflow
 
-Task Received → Task Started → Task Completed
+**Task Received → Task Started → Task Completed**
 
-The application records:
+For each task, the application tracks:
 
-*Task Name
-*Task ID
-*Received Time
-*Start Time
-*Completion Time
-*Total Time Taken
+* Task Name and Task ID
+* Received Time
+* Start Time
+* Completion Time
+* Total Time Taken
+* Task Status
 
-This helps users understand exactly how many minutes are required to complete each task.
+## Files
 
-##Files
-*index.html — Main task management page
-*task.html — Individual task details and time tracking page
-*style.css — Application styles
-*script.js — Task management and time tracking logic
+* `index.html` — Main task management page
+* `task.html` — Task details and time tracking page
+* `style.css` — Application styles
+* `script.js` — Task management and time tracking logic
 
-##Data Storage
+## Data Storage
 
-Task information is currently stored using the browser's localStorage.
+Task data is currently stored in the browser using `localStorage`. No backend or database is required for the current version.
 
-This means the application works without a backend or database for now, and the data is stored locally in the user's browser.
+## Future Improvements
 
-##Future Improvements
-*Task reports and analytics
-*Daily and Shift completion reports
-*Average task completion time
-*Export task reports
-*Backend and database integration
-*Multi-user task tracking
+* Daily and shift completion reports
+* Task analytics and average completion time
+* Export task reports
+* Backend and database integration
+* Multi-user task tracking
 
-Current Focus: Building a reliable task page that accurately tracks when a task comes in, when work starts, when it is completed, and the total time taken.
+---
+
+**Current Focus:** Building a reliable task page that accurately tracks task timing and completion.
