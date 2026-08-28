@@ -1,41 +1,53 @@
-# Task Manager QA
+#Task Manager QA
 
-A static task board app — no build step, no backend.
+A task tracking application designed to monitor tasks and measure the time taken to complete them.
 
-## Files
-- `index.html` — markup
-- `style.css` — all styles
-- `script.js` — all app logic (board state, timers, canvas drawing tool)
-- `vercel.json` — static deploy config
+The application focuses on tracking the task lifecycle and providing clear visibility into how long each task takes.
 
-## Data storage
-The app saves board state to the browser's `localStorage` under the key
-`board-state`, so data is per-browser/per-device (nothing is synced to a
-server or database).
+##Current Features
+*Create and view tasks
+*Track task details using Task Name and Task ID
+*Record the time when a task is received
+*Start and stop task tracking
+*Track the time taken to complete a task
+*Display task status and completion information
+*View task details on a dedicated Task Page
 
-## Run locally
-Just open `index.html` in a browser, or serve the folder:
+##Task Time Tracking
 
-```bash
-npx serve .
-```
+Each task can be tracked from the moment it arrives until it is completed.
 
-## Deploy to Vercel
+Task Received → Task Started → Task Completed
 
-### Option A — Vercel CLI
-```bash
-npm i -g vercel
-vercel
-```
+The application records:
 
-### Option B — Git + Vercel dashboard
-```bash
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin <your-repo-url>
-git push -u origin main
-```
-Then import the repo at https://vercel.com/new — no build command or
-output directory needed, it's served as-is (static site).
+*Task Name
+*Task ID
+*Received Time
+*Start Time
+*Completion Time
+*Total Time Taken
+
+This helps users understand exactly how many minutes are required to complete each task.
+
+##Files
+*index.html — Main task management page
+*task.html — Individual task details and time tracking page
+*style.css — Application styles
+*script.js — Task management and time tracking logic
+
+##Data Storage
+
+Task information is currently stored using the browser's localStorage.
+
+This means the application works without a backend or database for now, and the data is stored locally in the user's browser.
+
+##Future Improvements
+*Task reports and analytics
+*Daily and Shift completion reports
+*Average task completion time
+*Export task reports
+*Backend and database integration
+*Multi-user task tracking
+
+Current Focus: Building a reliable task page that accurately tracks when a task comes in, when work starts, when it is completed, and the total time taken.
