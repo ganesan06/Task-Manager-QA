@@ -245,7 +245,7 @@ function render(){
       col.appendChild(hint);
     }
 
-    if(colDef.id === 'red'){
+    if(colDef.id === 'red' && isSuperUser()){
       const trigger = document.createElement('button');
       trigger.className = 'add-trigger-btn';
       trigger.textContent = '+ Add task';
@@ -742,20 +742,24 @@ function renderSubtaskSidebar(task){
       groupEl.appendChild(card);
     });
 
-    const addSubBtn = document.createElement('button');
-    addSubBtn.className = 'add-subtask-btn';
-    addSubBtn.textContent = '+ Add subtask';
-    addSubBtn.addEventListener('click', () => openAddSubtaskModal(group.id));
-    groupEl.appendChild(addSubBtn);
+    if(isSuperUser()){
+      const addSubBtn = document.createElement('button');
+      addSubBtn.className = 'add-subtask-btn';
+      addSubBtn.textContent = '+ Add subtask';
+      addSubBtn.addEventListener('click', () => openAddSubtaskModal(group.id));
+      groupEl.appendChild(addSubBtn);
+    }
 
     subtaskSidebar.appendChild(groupEl);
   });
 
-  const addGroupBtn = document.createElement('button');
-  addGroupBtn.className = 'add-group-btn';
-  addGroupBtn.textContent = '+ Add subtask group';
-  addGroupBtn.addEventListener('click', () => openAddGroupModal());
-  subtaskSidebar.appendChild(addGroupBtn);
+  if(isSuperUser()){
+    const addGroupBtn = document.createElement('button');
+    addGroupBtn.className = 'add-group-btn';
+    addGroupBtn.textContent = '+ Add subtask group';
+    addGroupBtn.addEventListener('click', () => openAddGroupModal());
+    subtaskSidebar.appendChild(addGroupBtn);
+  }
 
   subtaskSidebar.querySelectorAll('[data-remove-subtask]').forEach(btn => {
     btn.addEventListener('click', e => {
@@ -1149,10 +1153,67 @@ measureResetBtn.addEventListener('click', e => {
   updateMeasureButtonsState();
 });
 
+const ROLE_STORAGE_KEY = 'user-role';
+let userRole = 'super';
+
+const roleLockedBtn = document.getElementById('roleLockedBtn');
+const roleOptions = document.getElementById('roleOptions');
+const roleSuperBtn = document.getElementById('roleSuperBtn');
+const roleUserBtn = document.getElementById('roleUserBtn');
+
+function isSuperUser(){
+  return userRole === 'super';
+}
+
+function roleLabel(role){
+  return role === 'super' ? 'Super User' : 'User';
+}
+
+function updateRoleButtons(){
+  roleLockedBtn.innerHTML = `${roleLabel(userRole)} <span class="role-caret">&#9662;</span>`;
+  roleSuperBtn.classList.toggle('active', userRole === 'super');
+  roleUserBtn.classList.toggle('active', userRole === 'user');
+}
+
+function closeRoleOptions(){
+  roleOptions.classList.add('hidden');
+}
+
+roleLockedBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  roleOptions.classList.toggle('hidden');
+});
+
+document.addEventListener('click', e => {
+  if(!roleOptions.classList.contains('hidden') && !e.target.closest('#roleToggle')){
+    closeRoleOptions();
+  }
+});
+
+async function setUserRole(role){
+  userRole = role;
+  updateRoleButtons();
+  closeRoleOptions();
+  await storageSet(ROLE_STORAGE_KEY, role);
+  render();
+  if(currentDetailTaskId !== null){
+    const task = getCurrentTask();
+    if(task) renderSubtaskSidebar(task);
+  }
+}
+
+roleSuperBtn.addEventListener('click', () => setUserRole('super'));
+roleUserBtn.addEventListener('click', () => setUserRole('user'));
+
 async function init(){
   const state = await loadState();
   tasks = state.tasks;
   nextId = state.nextId;
+
+  const savedRole = await storageGet(ROLE_STORAGE_KEY);
+  userRole = (savedRole === 'user' || savedRole === 'super') ? savedRole : 'super';
+  updateRoleButtons();
+
   render();
   setInterval(tick, 1000);
 
