@@ -309,8 +309,8 @@ function render(){
 function tick(){
   if(isDragging) return;
   if(currentDetailTaskId !== null){
-    updateDetailTimerPill();
     updateMeasureTimerDisplay();
+    updateAllSubtaskTimerDisplays();
     return;
   }
   render();
@@ -597,7 +597,6 @@ const canvasHistoryByTask = {}; // { [taskId]: { undo: [...], redo: [...] } }
 const detailView = document.getElementById('detailView');
 const detailTaskName = document.getElementById('detailTaskName');
 const detailTaskId = document.getElementById('detailTaskId');
-const detailTimerPill = document.getElementById('detailTimerPill');
 const subtaskSidebar = document.getElementById('subtaskSidebar');
 const detailRightPanel = document.getElementById('detailRightPanel');
 const panelToggleIcon = document.getElementById('panelToggleIcon');
@@ -681,21 +680,38 @@ detailRightPanel.addEventListener('click', () => {
   panelToggleIcon.innerHTML = expanded ? '&#9665; Notes panel (empty)' : '&#9655;';
 });
 
-function updateDetailTimerPill(){
-  const task = getCurrentTask();
-  if(!task) return;
-  if(task.col === 'green'){
-    if(task.frozenRemaining == null) task.frozenRemaining = remainingSeconds(task);
-    detailTimerPill.textContent = fmt(task.frozenRemaining);
-    return;
-  }
-  detailTimerPill.textContent = fmt(remainingSeconds(task));
-}
-
 /* ---- Subtask sidebar ---- */
 
 let pendingAddGroupTarget = null;
 let pendingAddSubtaskGroupId = null;
+
+function ensureSubtaskTimer(sub){
+  if(!sub.timer) sub.timer = { elapsedMs: 0, running: false, startedAt: null };
+}
+
+function getSubtaskElapsedMs(sub){
+  ensureSubtaskTimer(sub);
+  const t = sub.timer;
+  return t.running ? (t.elapsedMs + (Date.now() - t.startedAt)) : t.elapsedMs;
+}
+
+function findSubtask(task, groupId, subId){
+  const group = task.subtaskGroups.find(g => String(g.id) === groupId);
+  if(!group) return null;
+  const sub = group.subtasks.find(s => String(s.id) === subId);
+  return sub ? { group, sub } : null;
+}
+
+function updateAllSubtaskTimerDisplays(){
+  const task = getCurrentTask();
+  if(!task) return;
+  subtaskSidebar.querySelectorAll('[data-sub-timer]').forEach(el => {
+    const [groupId, subId] = el.dataset.subTimer.split(':');
+    const found = findSubtask(task, groupId, subId);
+    if(!found) return;
+    el.textContent = fmt(getSubtaskElapsedMs(found.sub) / 1000);
+  });
+}
 
 function renderSubtaskSidebar(task){
   subtaskSidebar.innerHTML = '';
@@ -709,15 +725,17 @@ function renderSubtaskSidebar(task){
     groupEl.appendChild(header);
 
     group.subtasks.forEach(sub => {
+      ensureSubtaskTimer(sub);
+      const running = sub.timer.running;
       const card = document.createElement('div');
       card.className = 'subtask-card';
       card.innerHTML = `
         <div class="subtask-card-top">${escapeHtml(sub.title)}</div>
         <div class="subtask-card-bottom">
-          <span class="subtask-icon">&#10073;&#10073;</span>
-          <span class="subtask-icon">&#9724;</span>
-          <span class="subtask-icon">&#9679;</span>
-          <span class="subtask-timer-pill">00:00:00</span>
+          <button class="subtask-icon" title="Pause" data-sub-pause="${group.id}:${sub.id}" ${running ? '' : 'disabled'}>&#10073;&#10073;</button>
+          <button class="subtask-icon" title="Reset" data-sub-reset="${group.id}:${sub.id}">&#9724;</button>
+          <button class="subtask-icon" title="Play" data-sub-play="${group.id}:${sub.id}" ${running ? 'disabled' : ''}>&#9679;</button>
+          <span class="subtask-timer-pill" data-sub-timer="${group.id}:${sub.id}">${fmt(getSubtaskElapsedMs(sub)/1000)}</span>
           <button class="subtask-remove" title="Remove subtask" data-remove-subtask="${group.id}:${sub.id}">&times;</button>
         </div>
       `;
@@ -747,6 +765,55 @@ function renderSubtaskSidebar(task){
       const group = t.subtaskGroups.find(g => String(g.id) === groupId);
       if(!group) return;
       group.subtasks = group.subtasks.filter(s => String(s.id) !== subId);
+      saveState();
+      renderSubtaskSidebar(t);
+    });
+  });
+
+  subtaskSidebar.querySelectorAll('[data-sub-play]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const [groupId, subId] = e.currentTarget.dataset.subPlay.split(':');
+      const t = getCurrentTask();
+      if(!t) return;
+      const found = findSubtask(t, groupId, subId);
+      if(!found) return;
+      ensureSubtaskTimer(found.sub);
+      if(found.sub.timer.running) return;
+      found.sub.timer.running = true;
+      found.sub.timer.startedAt = Date.now();
+      saveState();
+      renderSubtaskSidebar(t);
+    });
+  });
+
+  subtaskSidebar.querySelectorAll('[data-sub-pause]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const [groupId, subId] = e.currentTarget.dataset.subPause.split(':');
+      const t = getCurrentTask();
+      if(!t) return;
+      const found = findSubtask(t, groupId, subId);
+      if(!found) return;
+      ensureSubtaskTimer(found.sub);
+      if(!found.sub.timer.running) return;
+      found.sub.timer.elapsedMs += Date.now() - found.sub.timer.startedAt;
+      found.sub.timer.running = false;
+      found.sub.timer.startedAt = null;
+      saveState();
+      renderSubtaskSidebar(t);
+    });
+  });
+
+  subtaskSidebar.querySelectorAll('[data-sub-reset]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const [groupId, subId] = e.currentTarget.dataset.subReset.split(':');
+      const t = getCurrentTask();
+      if(!t) return;
+      const found = findSubtask(t, groupId, subId);
+      if(!found) return;
+      found.sub.timer = { elapsedMs: 0, running: false, startedAt: null };
       saveState();
       renderSubtaskSidebar(t);
     });
