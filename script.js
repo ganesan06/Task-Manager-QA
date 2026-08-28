@@ -6,10 +6,10 @@ const hasArtifactStorage = typeof window.storage !== 'undefined'
   && typeof window.storage.get === 'function'
   && typeof window.storage.set === 'function';
 
-async function storageGet(key){
+async function storageGet(key, shared){
   if(hasArtifactStorage){
     try{
-      const result = await window.storage.get(key, false);
+      const result = await window.storage.get(key, !!shared);
       return result ? result.value : null;
     }catch(e){
       return null;
@@ -22,10 +22,10 @@ async function storageGet(key){
   }
 }
 
-async function storageSet(key, value){
+async function storageSet(key, value, shared){
   if(hasArtifactStorage){
     try{
-      await window.storage.set(key, value, false);
+      await window.storage.set(key, value, !!shared);
       return;
     }catch(e){
       console.error('window.storage save failed, falling back to localStorage', e);
@@ -65,7 +65,7 @@ function defaultTasks(){
 
 async function loadState(){
   try{
-    const raw = await storageGet(STORAGE_KEY);
+    const raw = await storageGet(STORAGE_KEY, true);
     if(!raw) return { tasks: defaultTasks(), nextId: 11 };
     const parsed = JSON.parse(raw);
     if(!Array.isArray(parsed.tasks) || typeof parsed.nextId !== 'number'){
@@ -78,7 +78,7 @@ async function loadState(){
 }
 
 async function saveState(){
-  await storageSet(STORAGE_KEY, JSON.stringify({ tasks, nextId }));
+  await storageSet(STORAGE_KEY, JSON.stringify({ tasks, nextId }), true);
 }
 
 let tasks = [];
@@ -812,6 +812,7 @@ function renderSubtaskSidebar(task){
   subtaskSidebar.querySelectorAll('[data-sub-reset]').forEach(btn => {
     btn.addEventListener('click', e => {
       e.stopPropagation();
+      if(!requireSuperUser('Only Super User can reset the timer.')) return;
       const [groupId, subId] = e.currentTarget.dataset.subReset.split(':');
       const t = getCurrentTask();
       if(!t) return;
@@ -1075,6 +1076,32 @@ document.addEventListener('keydown', e => {
   if(e.key === 'Escape' && !assignRequiredModal.classList.contains('hidden')) closeAssignRequiredPopup();
 });
 
+/* ---- Permission notice popup (Super User only actions) ---- */
+
+const permissionNoticeModal = document.getElementById('permissionNoticeModal');
+const permissionNoticeBody = document.getElementById('permissionNoticeBody');
+
+function showPermissionNotice(message){
+  permissionNoticeBody.textContent = message || 'Only Super User can do this.';
+  permissionNoticeModal.classList.remove('hidden');
+}
+function closePermissionNotice(){
+  permissionNoticeModal.classList.add('hidden');
+}
+document.getElementById('permissionNoticeOk').addEventListener('click', closePermissionNotice);
+permissionNoticeModal.addEventListener('click', e => {
+  if(e.target === permissionNoticeModal) closePermissionNotice();
+});
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape' && !permissionNoticeModal.classList.contains('hidden')) closePermissionNotice();
+});
+
+function requireSuperUser(message){
+  if(isSuperUser()) return true;
+  showPermissionNotice(message);
+  return false;
+}
+
 /* ---- Task-page measuring timer (independent stopwatch, counts up) ---- */
 
 const measureTimerDisplay = document.getElementById('measureTimerDisplay');
@@ -1145,6 +1172,7 @@ measureStopBtn.addEventListener('click', e => {
 
 measureResetBtn.addEventListener('click', e => {
   e.stopPropagation();
+  if(!requireSuperUser('Only Super User can reset the timer.')) return;
   const task = getCurrentTask();
   if(!task) return;
   task.measureTimer = { elapsedMs: 0, running: false, startedAt: null };
