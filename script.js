@@ -1181,6 +1181,113 @@ measureResetBtn.addEventListener('click', e => {
   updateMeasureButtonsState();
 });
 
+/* ---- Report modal (summary + shifts) ---- */
+
+const SHIFTS_STORAGE_KEY = 'shifts-list';
+let shifts = [];
+
+const reportBtn = document.getElementById('reportBtn');
+const reportModal = document.getElementById('reportModal');
+const reportModalClose = document.getElementById('reportModalClose');
+const reportSummary = document.getElementById('reportSummary');
+const shiftFromInput = document.getElementById('shiftFromInput');
+const shiftToInput = document.getElementById('shiftToInput');
+const shiftError = document.getElementById('shiftError');
+const addShiftBtn = document.getElementById('addShiftBtn');
+const shiftList = document.getElementById('shiftList');
+
+function formatTime12h(hhmm){
+  const [h, m] = hhmm.split(':').map(Number);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${period}`;
+}
+
+function renderReportSummary(){
+  const visibleTasks = tasks.filter(t => !t.hidden && !t.deleted);
+  const rows = COLUMNS.map(c => {
+    const count = visibleTasks.filter(t => t.col === c.id).length;
+    return `<div class="report-summary-row"><span>${c.label}</span><strong>${count}</strong></div>`;
+  }).join('');
+  reportSummary.innerHTML = `
+    <div class="report-summary-total"><span>Total tasks</span><span>${visibleTasks.length}</span></div>
+    ${rows}
+  `;
+}
+
+async function loadShifts(){
+  try{
+    const raw = await storageGet(SHIFTS_STORAGE_KEY, true);
+    if(!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  }catch(e){
+    return [];
+  }
+}
+
+async function saveShifts(){
+  await storageSet(SHIFTS_STORAGE_KEY, JSON.stringify(shifts), true);
+}
+
+function renderShiftList(){
+  if(shifts.length === 0){
+    shiftList.innerHTML = `<div class="empty-hint" style="padding:12px 0;">No shifts added yet</div>`;
+    return;
+  }
+  shiftList.innerHTML = shifts.map(shift => `
+    <div class="shift-item">
+      <span class="shift-item-range">${formatTime12h(shift.from)} &ndash; ${formatTime12h(shift.to)}</span>
+      <button class="shift-item-remove" title="Remove shift" data-remove-shift="${shift.id}">&times;</button>
+    </div>
+  `).join('');
+
+  shiftList.querySelectorAll('[data-remove-shift]').forEach(btn => {
+    btn.addEventListener('click', async e => {
+      const id = e.currentTarget.dataset.removeShift;
+      shifts = shifts.filter(s => String(s.id) !== id);
+      await saveShifts();
+      renderShiftList();
+    });
+  });
+}
+
+addShiftBtn.addEventListener('click', async () => {
+  shiftError.classList.remove('show');
+  const from = shiftFromInput.value;
+  const to = shiftToInput.value;
+
+  if(!from || !to){
+    shiftError.textContent = 'Please choose both a From and To time.';
+    shiftError.classList.add('show');
+    return;
+  }
+
+  shifts.push({ id: 'shift' + Date.now(), from, to });
+  await saveShifts();
+  renderShiftList();
+  shiftFromInput.value = '';
+  shiftToInput.value = '';
+});
+
+reportBtn.addEventListener('click', async () => {
+  renderReportSummary();
+  shifts = await loadShifts();
+  renderShiftList();
+  shiftError.classList.remove('show');
+  reportModal.classList.remove('hidden');
+});
+
+reportModalClose.addEventListener('click', () => {
+  reportModal.classList.add('hidden');
+});
+reportModal.addEventListener('click', e => {
+  if(e.target === reportModal) reportModal.classList.add('hidden');
+});
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape' && !reportModal.classList.contains('hidden')) reportModal.classList.add('hidden');
+});
+
 const ROLE_STORAGE_KEY = 'user-role';
 let userRole = 'super';
 
