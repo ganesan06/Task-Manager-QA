@@ -11,7 +11,7 @@
 <body>
 
 <div class="topbar">
-    <div class="brand"><span class=""></span>TASK MANAGER</div>
+    <div class="brand" id="brandLogo" title="Go to board"><span class=""></span>TASK MANAGER</div>
     <div class="icon-bar">
       <button class="icon-btn" id="homeBtn" title="Home">
          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:21px; height:21px;">
@@ -56,6 +56,15 @@
       <span class="sdot filled-black"></span>
       <span class="status-timer-pill" id="detailTimerPill">00:00:00</span>
     </div>
+  </div>
+
+  <div class="measure-toolbar">
+    <span class="measure-label">Task timer:</span>
+    <span class="measure-timer-display" id="measureTimerDisplay">00:00:00</span>
+    <button class="measure-btn" id="measureStartBtn">Start</button>
+    <button class="measure-btn" id="measurePauseBtn" disabled>Pause</button>
+    <button class="measure-btn" id="measureStopBtn" disabled>Stop</button>
+    <button class="measure-btn" id="measureResetBtn">Reset</button>
   </div>
 
   <div class="detail-body">
@@ -156,6 +165,16 @@
     <div class="modal-actions">
       <button class="modal-cancel" id="confirmModalCancel">Cancel</button>
       <button class="modal-confirm" id="confirmModalConfirm">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="assignRequiredModal">
+  <div class="modal-box">
+    <p class="modal-title">Task not assigned</p>
+    <p class="modal-body">Please assign this task before drawing on the canvas.</p>
+    <div class="modal-actions">
+      <button class="modal-confirm" id="assignRequiredOk" style="background:var(--blue);">OK</button>
     </div>
   </div>
 </div>
