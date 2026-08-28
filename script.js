@@ -90,6 +90,15 @@ function remainingSeconds(task){
 }
 
 function getQueueDisplay(task, columnTasks){
+  const isCompleted = task.col === 'green';
+
+  if(isCompleted){
+    if(task.frozenRemaining == null){
+      task.frozenRemaining = remainingSeconds(task);
+    }
+    return { seconds: task.frozenRemaining, paused: false };
+  }
+
   const isCheckout = task.col === 'mint';
 
   if(!isCheckout){
@@ -131,7 +140,7 @@ function render(){
   board.innerHTML = '';
 
   COLUMNS.forEach(colDef => {
-    const colTasks = tasks.filter(t => t.col === colDef.id && !t.hidden);
+    const colTasks = tasks.filter(t => t.col === colDef.id && !t.hidden && !t.deleted);
     if(colDef.id !== 'mint'){
       colTasks.sort((a, b) => remainingSeconds(a) - remainingSeconds(b));
     }
@@ -158,6 +167,7 @@ function render(){
       const task = tasks.find(t => t.id === id);
       if(task){
         task.col = colDef.id;
+        if(colDef.id !== 'green') task.frozenRemaining = null;
         if(colDef.id === 'red'){
           task.owner = 'Assigned to me';
           task.me = true;
@@ -277,6 +287,7 @@ function render(){
       task.owner = 'Assigned';
       task.me = true;
       task.col = 'amber';
+      task.frozenRemaining = null;
       saveState();
       render();
     });
@@ -326,9 +337,11 @@ confirmModalCancel.addEventListener('click', closeConfirmModal);
 
 confirmModalConfirm.addEventListener('click', () => {
   if(pendingDeleteId !== null){
-    tasks = tasks.filter(t => t.id !== pendingDeleteId);
+    const task = tasks.find(t => t.id === pendingDeleteId);
+    if(task) task.deleted = true;
     saveState();
     render();
+    updateTrashBadge();
   }
   closeConfirmModal();
 });
@@ -425,6 +438,78 @@ document.addEventListener('keydown', e => {
   if(e.key === 'Escape' && !hiddenModal.classList.contains('hidden')) hiddenModal.classList.add('hidden');
 });
 
+/* ---- Trash (deleted tasks) ---- */
+
+const trashModal = document.getElementById('trashModal');
+const trashList = document.getElementById('trashList');
+const trashBadgeCount = document.getElementById('trashBadgeCount');
+const trashBtn = document.getElementById('trashBtn');
+
+function updateTrashBadge(){
+  const count = tasks.filter(t => t.deleted).length;
+  trashBadgeCount.textContent = count;
+  trashBadgeCount.classList.toggle('hidden', count === 0);
+}
+
+function renderTrashList(){
+  const deletedTasks = tasks.filter(t => t.deleted);
+  if(deletedTasks.length === 0){
+    trashList.innerHTML = `<div class="empty-hint" style="padding:20px 0;">Trash is empty</div>`;
+    return;
+  }
+  trashList.innerHTML = deletedTasks.map(t => `
+    <div class="hidden-item">
+      <div>
+        <div class="hidden-item-title">${t.title}</div>
+        <div class="hidden-item-col">${colLabelById[t.col] || t.col}</div>
+      </div>
+      <div class="hidden-item-actions">
+        <button class="restore-btn" data-trash-restore="${t.id}">Restore</button>
+        <button class="delete-forever-btn" data-trash-delete="${t.id}">Delete forever</button>
+      </div>
+    </div>
+  `).join('');
+
+  trashList.querySelectorAll('[data-trash-restore]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const id = parseInt(e.currentTarget.dataset.trashRestore, 10);
+      const task = tasks.find(t => t.id === id);
+      if(!task) return;
+      task.deleted = false;
+      saveState();
+      render();
+      updateTrashBadge();
+      renderTrashList();
+    });
+  });
+
+  trashList.querySelectorAll('[data-trash-delete]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const id = parseInt(e.currentTarget.dataset.trashDelete, 10);
+      tasks = tasks.filter(t => t.id !== id);
+      saveState();
+      render();
+      updateTrashBadge();
+      renderTrashList();
+    });
+  });
+}
+
+trashBtn.addEventListener('click', () => {
+  renderTrashList();
+  trashModal.classList.remove('hidden');
+});
+
+document.getElementById('trashModalClose').addEventListener('click', () => {
+  trashModal.classList.add('hidden');
+});
+trashModal.addEventListener('click', e => {
+  if(e.target === trashModal) trashModal.classList.add('hidden');
+});
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape' && !trashModal.classList.contains('hidden')) trashModal.classList.add('hidden');
+});
+
 const addTaskModal = document.getElementById('addTaskModal');
 const addTaskTitleInput = document.getElementById('addTaskTitleInput');
 const addTaskIdInput = document.getElementById('addTaskIdInput');
@@ -510,7 +595,6 @@ let currentTool = 'line';
 const canvasHistoryByTask = {}; // { [taskId]: { undo: [...], redo: [...] } }
 
 const detailView = document.getElementById('detailView');
-const detailBackBtn = document.getElementById('detailBackBtn');
 const detailTaskName = document.getElementById('detailTaskName');
 const detailTaskId = document.getElementById('detailTaskId');
 const detailTimerPill = document.getElementById('detailTimerPill');
@@ -588,8 +672,6 @@ function closeDetailView(){
   render();
 }
 
-detailBackBtn.addEventListener('click', closeDetailView);
-
 document.addEventListener('keydown', e => {
   if(e.key === 'Escape' && !detailView.classList.contains('hidden')) closeDetailView();
 });
@@ -602,6 +684,11 @@ detailRightPanel.addEventListener('click', () => {
 function updateDetailTimerPill(){
   const task = getCurrentTask();
   if(!task) return;
+  if(task.col === 'green'){
+    if(task.frozenRemaining == null) task.frozenRemaining = remainingSeconds(task);
+    detailTimerPill.textContent = fmt(task.frozenRemaining);
+    return;
+  }
   detailTimerPill.textContent = fmt(remainingSeconds(task));
 }
 
@@ -1006,6 +1093,7 @@ async function init(){
   setInterval(updateIstClock, 1000);
 
   updateHiddenBadge();
+  updateTrashBadge();
 }
 
 init();
