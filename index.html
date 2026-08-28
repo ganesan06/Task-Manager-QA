@@ -198,6 +198,33 @@
   </div>
 </div>
 
+<div class="modal-overlay hidden" id="reportModal">
+  <div class="modal-box modal-box-lg">
+    <p class="modal-title">Board report</p>
+    <div class="modal-scroll-body">
+      <div id="reportSummary"></div>
+
+      <p class="report-section-title">Shifts</p>
+      <div class="shift-add-row">
+        <div class="shift-field">
+          <label for="shiftFromInput">From</label>
+          <input type="time" id="shiftFromInput" />
+        </div>
+        <div class="shift-field">
+          <label for="shiftToInput">To</label>
+          <input type="time" id="shiftToInput" />
+        </div>
+        <button class="add-shift-btn" id="addShiftBtn">+ Add Shift</button>
+      </div>
+      <p class="shift-error" id="shiftError"></p>
+      <div class="shift-list" id="shiftList"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-cancel" id="reportModalClose">Close</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay hidden" id="permissionNoticeModal">
   <div class="modal-box">
     <p class="modal-title">Permission required</p>
