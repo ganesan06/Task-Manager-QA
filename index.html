@@ -13,6 +13,13 @@
 <div class="topbar">
     <div class="brand" id="brandLogo" title="Go to board"><span class=""></span>TASK MANAGER</div>
     <div class="icon-bar">
+      <div class="role-toggle" id="roleToggle">
+        <button class="role-locked-btn" id="roleLockedBtn">Super User</button>
+        <div class="role-options hidden" id="roleOptions">
+          <button class="role-btn" id="roleSuperBtn" data-role="super">Super User</button>
+          <button class="role-btn" id="roleUserBtn" data-role="user">User</button>
+        </div>
+      </div>
       <button class="icon-btn" id="homeBtn" title="Home">
          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:21px; height:21px;">
     <path d="M3 11l9-8 9 8"/>
